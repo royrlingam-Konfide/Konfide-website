@@ -55,7 +55,7 @@
     ::-webkit-scrollbar-thumb{background:rgba(191,155,80,.35);border-radius:2px;}
 
     @media(max-width:900px){
-      #nav{padding:22px 28px;} #nav.scrolled{padding:14px 28px;}
+      #nav{padding:36px 28px;} #nav.scrolled{padding:14px 28px;}
       .nav-links,.nav-cta{display:none;} #hamburger{display:flex;}
       .sp{padding-left:28px;padding-right:28px;}
       /* Hero text */
@@ -66,9 +66,11 @@
       [style*="padding:140px 0"]{padding-top:72px !important;padding-bottom:72px !important;}
       [style*="padding:160px 0"]{padding-top:72px !important;padding-bottom:72px !important;}
       [style*="padding:120px 0"]{padding-top:64px !important;padding-bottom:64px !important;}
-      /* Hero inner padding */
-      [style*="padding-top:220px"]{padding-top:120px !important;}
-      [style*="padding-bottom:110px"]{padding-bottom:60px !important;}
+      /* About hero: center content vertically instead of pinning to bottom */
+      [style*="justify-content:flex-end"]{justify-content:center !important;}
+      /* Hero inner padding — equal top/bottom so content sits at the vertical midpoint */
+      [style*="padding-top:220px"]{padding-top:88px !important;}
+      [style*="padding-bottom:110px"]{padding-bottom:88px !important;}
       /* Card / panel padding */
       [style*="padding:52px 48px"]{padding:24px 20px !important;}
       /* Gap reduction */
