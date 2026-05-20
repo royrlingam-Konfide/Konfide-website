@@ -58,6 +58,27 @@
       #nav{padding:22px 28px;} #nav.scrolled{padding:14px 28px;}
       .nav-links,.nav-cta{display:none;} #hamburger{display:flex;}
       .sp{padding-left:28px;padding-right:28px;}
+      /* Hero text */
+      .h-hero{white-space:normal !important;font-size:clamp(30px,9vw,46px) !important;}
+      /* Hide about-hero corner captions — overlap with text on small screens */
+      [style*="bottom:180px"]{display:none !important;}
+      /* Section vertical padding */
+      [style*="padding:140px 0"]{padding-top:72px !important;padding-bottom:72px !important;}
+      [style*="padding:160px 0"]{padding-top:72px !important;padding-bottom:72px !important;}
+      [style*="padding:120px 0"]{padding-top:64px !important;padding-bottom:64px !important;}
+      /* Hero inner padding */
+      [style*="padding-top:220px"]{padding-top:120px !important;}
+      [style*="padding-bottom:110px"]{padding-bottom:60px !important;}
+      /* Card / panel padding */
+      [style*="padding:52px 48px"]{padding:24px 20px !important;}
+      /* Gap reduction */
+      [style*="gap:100px"]{gap:28px !important;}
+      /* Story chapter flex gap */
+      [style*="flex-direction:column"][style*="gap:64px"]{gap:32px !important;}
+      /* Unstick photo columns */
+      [style*="position:sticky"]{position:relative !important;top:auto !important;}
+      /* Footer grid → 2-column */
+      footer .sp > div:first-child{grid-template-columns:1fr 1fr !important;gap:28px !important;}
     }
     @media(min-width:901px){.sp{padding-left:72px;padding-right:72px;}}
   </style>
@@ -544,7 +565,16 @@
   function closeMob() { overlay.style.display='none'; document.body.style.overflow=''; }
   const io = new IntersectionObserver(e => e.forEach(x => { if (x.isIntersecting) { x.target.classList.add('on'); io.unobserve(x.target); } }), { threshold:.1 });
   document.querySelectorAll('.reveal').forEach(el => io.observe(el));
-  if (window.innerWidth < 900) document.querySelectorAll('[style*="grid-template-columns"]').forEach(el => { el.style.gridTemplateColumns = '1fr'; });
+  if (window.innerWidth < 900) {
+    document.querySelectorAll('[style*="grid-template-columns"]').forEach(el => {
+      if (el.closest('footer')) {
+        el.style.gridTemplateColumns = '1fr 1fr';
+        el.style.gap = '28px';
+      } else {
+        el.style.gridTemplateColumns = '1fr';
+      }
+    });
+  }
 </script>
 </body>
 </html>

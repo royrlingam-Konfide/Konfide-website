@@ -55,6 +55,25 @@
       #nav{padding:22px 28px;} #nav.scrolled{padding:14px 28px;}
       .nav-links,.nav-cta{display:none;} #hamburger{display:flex;}
       .sp{padding-left:28px;padding-right:28px;}
+      /* Hero text */
+      .h-hero{white-space:normal !important;font-size:clamp(30px,9vw,46px) !important;}
+      /* Section vertical padding */
+      [style*="padding:120px 0"]{padding-top:64px !important;padding-bottom:64px !important;}
+      [style*="padding:0 0 120px"]{padding-bottom:64px !important;}
+      /* Hero inner padding */
+      [style*="padding-top:180px"]{padding-top:120px !important;}
+      [style*="padding-bottom:80px"]{padding-bottom:50px !important;}
+      /* Card / panel padding */
+      [style*="padding:64px"]{padding:28px 20px !important;}
+      [style*="padding:56px 64px"]{padding:28px 20px !important;}
+      /* Gap reduction */
+      [style*="gap:100px"]{gap:28px !important;}
+      /* Featured asset image min-height */
+      [style*="min-height:480px"]{min-height:240px !important;}
+      /* Commercial card: flex-row → column */
+      [style*="align-items:center"][style*="gap:64px"]{flex-direction:column !important;gap:20px !important;}
+      /* Footer grid → 2-column */
+      footer .sp > div:first-child{grid-template-columns:1fr 1fr !important;gap:28px !important;}
     }
     @media(min-width:901px){.sp{padding-left:72px;padding-right:72px;}}
   </style>
@@ -482,7 +501,20 @@
   function closeMob() { overlay.style.display='none'; document.body.style.overflow=''; }
   const io = new IntersectionObserver(e => e.forEach(x => { if (x.isIntersecting) { x.target.classList.add('on'); io.unobserve(x.target); } }), { threshold:.1 });
   document.querySelectorAll('.reveal').forEach(el => io.observe(el));
-  if (window.innerWidth < 900) document.querySelectorAll('[style*="grid-template-columns"]').forEach(el => { el.setAttribute('data-gc', el.style.gridTemplateColumns); el.style.gridTemplateColumns = '1fr'; });
+  if (window.innerWidth < 900) {
+    document.querySelectorAll('[style*="grid-template-columns"]').forEach(el => {
+      const orig = el.style.gridTemplateColumns;
+      el.setAttribute('data-gc', orig);
+      if (el.closest('footer')) {
+        el.style.gridTemplateColumns = '1fr 1fr';
+        el.style.gap = '28px';
+      } else if (orig.includes('repeat(4') || orig === '1fr 1fr 1fr 1fr') {
+        el.style.gridTemplateColumns = 'repeat(2,1fr)';
+      } else {
+        el.style.gridTemplateColumns = '1fr';
+      }
+    });
+  }
 </script>
 </body>
 </html>

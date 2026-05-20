@@ -129,6 +129,24 @@
       #nav { padding:22px 28px; } #nav.scrolled { padding:14px 28px; }
       .nav-links, .nav-cta { display:none; } #hamburger { display:flex; }
       .sp { padding-left:28px; padding-right:28px; }
+      /* Hero text */
+      .h-hero { white-space:normal !important; font-size:clamp(30px,9vw,46px) !important; }
+      /* Section vertical padding */
+      [style*="padding:140px 0"] { padding-top:72px !important; padding-bottom:72px !important; }
+      [style*="padding:160px 0"] { padding-top:72px !important; padding-bottom:72px !important; }
+      /* Hero inner padding */
+      [style*="padding-top:140px"][style*="padding-bottom:120px"] { padding-top:100px !important; padding-bottom:60px !important; }
+      /* Card / panel padding */
+      [style*="padding:52px 44px"] { padding:24px 20px !important; }
+      [style*="padding:48px 44px"] { padding:24px 20px !important; }
+      [style*="padding:56px 48px"] { padding:24px 20px !important; }
+      /* Gap reduction (JS doesn't touch gap, so selectors stay valid) */
+      [style*="gap:80px"] { gap:20px !important; }
+      /* Snapshot horizontal mini-cards → stack vertically */
+      [style*="display:flex"][style*="gap:0"][style*="overflow:hidden"] { flex-direction:column !important; }
+      [style*="width:180px"][style*="flex-shrink:0"] { width:100% !important; height:180px !important; }
+      /* Footer grid → 2-column */
+      footer .sp > div:first-child { grid-template-columns:1fr 1fr !important; gap:28px !important; }
     }
     @media (min-width:901px) { .sp { padding-left:72px; padding-right:72px; } }
   </style>
@@ -530,7 +548,12 @@
   if (window.innerWidth < 900) {
     document.querySelectorAll('[style*="grid-template-columns"]').forEach(el => {
       el.setAttribute('data-gc', el.style.gridTemplateColumns);
-      el.style.gridTemplateColumns = '1fr';
+      if (el.closest('footer')) {
+        el.style.gridTemplateColumns = '1fr 1fr';
+        el.style.gap = '28px';
+      } else {
+        el.style.gridTemplateColumns = '1fr';
+      }
     });
   }
 </script>
