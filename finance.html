@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financial Portal — Konfide Capital</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#F1F4F9; --surface:#FFFFFF; --surface-2:#F8FAFC;
+    --border:#E2E8F0; --text:#0F172A; --text-2:#475569; --text-3:#94A3B8;
+    --gold:#BF9B50; --green:#10B981; --red:#EF4444;
+    --radius:14px;
+    --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
+    --shadow-lg:0 4px 28px rgba(0,0,0,.1),0 1px 6px rgba(0,0,0,.06);
+  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+  /* ── Gate ── */
+  #gate{position:fixed;inset:0;z-index:1000;background:#060A12;display:flex;align-items:center;justify-content:center;}
+  .gate-box{background:#0B1120;border:1px solid rgba(191,155,80,.22);padding:52px 44px;width:100%;max-width:400px;text-align:center;}
+  .gate-logo{height:26px;margin-bottom:36px;}
+  .gate-title{font-family:'Cormorant Garamond',serif;font-size:1.65rem;font-weight:300;color:#EDE8DE;margin-bottom:8px;}
+  .gate-sub{font-size:.75rem;color:#545B6A;margin-bottom:32px;letter-spacing:.04em;}
+  .gate-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(191,155,80,.2);color:#EDE8DE;font-family:'Inter',sans-serif;font-size:.9rem;padding:14px 18px;outline:none;margin-bottom:14px;transition:border-color .2s;}
+  .gate-input:focus{border-color:rgba(191,155,80,.6);}
+  .gate-input::placeholder{color:#3D4456;}
+  .gate-btn{width:100%;background:#BF9B50;color:#060A12;border:none;font-family:'Inter',sans-serif;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;padding:15px;cursor:pointer;transition:background .2s;}
+  .gate-btn:hover{background:#D4AF60;}
+  .gate-error{font-size:.78rem;color:#EF4444;margin-top:12px;display:none;}
+
+  /* ── App ── */
+  #app{display:none;min-height:100vh;}
+
+  /* Header */
+  .header{background:#060A12;border-bottom:1px solid rgba(191,155,80,.15);padding:0 48px;height:64px;display:flex;align-items:center;justify-content:space-between;}
+  .header img{height:20px;}
+  .header-right{display:flex;align-items:center;gap:16px;}
+  .badge{font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:#BF9B50;background:rgba(191,155,80,.1);border:1px solid rgba(191,155,80,.22);padding:5px 14px;}
+  .header-date{font-size:.72rem;color:#545B6A;}
+
+  /* Page */
+  .page{max-width:1360px;margin:0 auto;padding:48px;}
+
+  .page-header{margin-bottom:40px;}
+  .page-header h1{font-family:'Cormorant Garamond',serif;font-size:2.4rem;font-weight:300;letter-spacing:-.02em;color:var(--text);margin-bottom:6px;}
+  .page-header p{font-size:.85rem;color:var(--text-2);}
+
+  /* Summary row */
+  .summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:52px;}
+  .summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;box-shadow:var(--shadow);}
+  .s-label{font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px;font-weight:500;}
+  .s-value{font-size:1.85rem;font-weight:700;color:var(--text);letter-spacing:-.04em;line-height:1;}
+  .s-sub{font-size:.75rem;color:var(--text-3);margin-top:8px;}
+
+  /* Section label */
+  .section-label{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-3);font-weight:600;margin-bottom:18px;}
+
+  /* Companies grid */
+  .companies-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;}
+
+  .company-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px 28px;box-shadow:var(--shadow);text-decoration:none;color:inherit;display:block;position:relative;overflow:hidden;transition:transform .25s cubic-bezier(.16,1,.3,1),box-shadow .25s cubic-bezier(.16,1,.3,1),border-color .25s;}
+  .company-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--c-accent,#BF9B50);}
+  .company-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:rgba(0,0,0,.1);}
+
+  .c-icon{width:48px;height:48px;border-radius:12px;background:var(--c-light,rgba(191,155,80,.1));display:flex;align-items:center;justify-content:center;font-size:1.35rem;margin-bottom:20px;}
+  .c-name{font-size:.97rem;font-weight:600;color:var(--text);margin-bottom:5px;line-height:1.35;}
+  .c-type{font-size:.73rem;color:var(--text-3);margin-bottom:24px;}
+  .c-stat{display:flex;justify-content:space-between;align-items:center;padding-top:18px;border-top:1px solid var(--border);}
+  .c-stat-label{font-size:.65rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;}
+  .c-stat-value{font-size:.82rem;font-weight:600;}
+  .c-arrow{position:absolute;bottom:28px;right:26px;font-size:1rem;color:var(--text-3);transition:color .2s,transform .2s;}
+  .company-card:hover .c-arrow{color:var(--c-accent,#BF9B50);transform:translateX(4px);}
+
+  @media(max-width:768px){
+    .header{padding:0 20px;}
+    .page{padding:28px 20px;}
+    .summary-row{grid-template-columns:1fr 1fr;gap:12px;margin-bottom:36px;}
+    .companies-grid{grid-template-columns:1fr;}
+    .s-value{font-size:1.5rem;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Gate ── -->
+<div id="gate">
+  <div class="gate-box">
+    <img src="LogoWhite.png" alt="Konfide Capital" class="gate-logo">
+    <div class="gate-title">Financial Portal</div>
+    <div class="gate-sub">Restricted — authorized personnel only</div>
+    <input type="password" id="gate-input" class="gate-input" placeholder="Enter access code"
+      onkeydown="if(event.key==='Enter')checkPass()">
+    <button class="gate-btn" onclick="checkPass()">Access Portal</button>
+    <div class="gate-error" id="gate-error">Incorrect access code. Try again.</div>
+  </div>
+</div>
+
+<!-- ── App ── -->
+<div id="app">
+  <header class="header">
+    <img src="LogoWhite.png" alt="Konfide Capital">
+    <div class="header-right">
+      <div class="badge">Financial Portal</div>
+      <div class="header-date" id="header-date"></div>
+    </div>
+  </header>
+
+  <div class="page">
+    <div class="page-header">
+      <h1>Portfolio Overview</h1>
+      <p>Select a company to open its financial dashboard</p>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="s-label">Portfolio Companies</div>
+        <div class="s-value">5</div>
+        <div class="s-sub">Active entities</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-label">Total Revenue (YTD)</div>
+        <div class="s-value">—</div>
+        <div class="s-sub">Upload data per company</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-label">Net Income (YTD)</div>
+        <div class="s-value">—</div>
+        <div class="s-sub">Upload data per company</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-label">Avg Gross Margin</div>
+        <div class="s-value">—</div>
+        <div class="s-sub">Upload data per company</div>
+      </div>
+    </div>
+
+    <div class="section-label">Companies</div>
+    <div class="companies-grid">
+
+      <a href="finance-dashboard.html?co=kirk" class="company-card"
+         style="--c-accent:#3B82F6;--c-light:rgba(59,130,246,.1);">
+        <div class="c-icon">🏫</div>
+        <div class="c-name">Smart Beginnings<br>Kirk & Butterfield</div>
+        <div class="c-type">Early Childhood Education</div>
+        <div class="c-stat">
+          <div><div class="c-stat-label">Status</div><div class="c-stat-value" style="color:#10B981;">Active</div></div>
+          <div><div class="c-stat-label">Location</div><div class="c-stat-value" style="color:var(--text-2);">Illinois</div></div>
+        </div>
+        <span class="c-arrow">→</span>
+      </a>
+
+      <a href="finance-dashboard.html?co=ogden" class="company-card"
+         style="--c-accent:#8B5CF6;--c-light:rgba(139,92,246,.1);">
+        <div class="c-icon">🏫</div>
+        <div class="c-name">Smart Beginnings<br>Ogden & IL 59</div>
+        <div class="c-type">Early Childhood Education</div>
+        <div class="c-stat">
+          <div><div class="c-stat-label">Status</div><div class="c-stat-value" style="color:#10B981;">Active</div></div>
+          <div><div class="c-stat-label">Location</div><div class="c-stat-value" style="color:var(--text-2);">Illinois</div></div>
+        </div>
+        <span class="c-arrow">→</span>
+      </a>
+
+      <a href="finance-dashboard.html?co=oswego" class="company-card"
+         style="--c-accent:#14B8A6;--c-light:rgba(20,184,166,.1);">
+        <div class="c-icon">🏫</div>
+        <div class="c-name">Smart Beginnings<br>Oswego</div>
+        <div class="c-type">Early Childhood Education</div>
+        <div class="c-stat">
+          <div><div class="c-stat-label">Status</div><div class="c-stat-value" style="color:#10B981;">Active</div></div>
+          <div><div class="c-stat-label">Location</div><div class="c-stat-value" style="color:var(--text-2);">Oswego, IL</div></div>
+        </div>
+        <span class="c-arrow">→</span>
+      </a>
+
+      <a href="finance-dashboard.html?co=properties" class="company-card"
+         style="--c-accent:#BF9B50;--c-light:rgba(191,155,80,.1);">
+        <div class="c-icon">🏢</div>
+        <div class="c-name">Konfide Properties</div>
+        <div class="c-type">Real Estate Investment</div>
+        <div class="c-stat">
+          <div><div class="c-stat-label">Status</div><div class="c-stat-value" style="color:#10B981;">Active</div></div>
+          <div><div class="c-stat-label">Location</div><div class="c-stat-value" style="color:var(--text-2);">Chicago, IL</div></div>
+        </div>
+        <span class="c-arrow">→</span>
+      </a>
+
+      <a href="finance-dashboard.html?co=rsquare" class="company-card"
+         style="--c-accent:#F59E0B;--c-light:rgba(245,158,11,.1);">
+        <div class="c-icon">🎓</div>
+        <div class="c-name">R Square Education</div>
+        <div class="c-type">Medical Education & Training</div>
+        <div class="c-stat">
+          <div><div class="c-stat-label">Status</div><div class="c-stat-value" style="color:#10B981;">Active</div></div>
+          <div><div class="c-stat-label">Focus</div><div class="c-stat-value" style="color:var(--text-2);">USMLE</div></div>
+        </div>
+        <span class="c-arrow">→</span>
+      </a>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // Change this password to whatever you want
+  const PASS = 'Konfide2026!';
+
+  function checkPass() {
+    const val = document.getElementById('gate-input').value;
+    if (val === PASS) {
+      sessionStorage.setItem('kc_auth', '1');
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      init();
+    } else {
+      const err = document.getElementById('gate-error');
+      err.style.display = 'block';
+      document.getElementById('gate-input').value = '';
+      document.getElementById('gate-input').focus();
+    }
+  }
+
+  function init() {
+    document.getElementById('header-date').textContent =
+      new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  }
+
+  if (sessionStorage.getItem('kc_auth') === '1') {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    init();
+  }
+</script>
+</body>
+</html>
