@@ -6,6 +6,7 @@
 <title>P&L Dashboard — Smart Beginnings</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
 :root{
   --bg:#F1F4F9;--surface:#fff;--border:#E2E8F0;
@@ -745,17 +746,29 @@ function updateCharts(c){
     {l:'Meals',        v:getVal('meals')},
   ].filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,10);
 
+  const expTotal=expCats.reduce((s,x)=>s+x.v,0);
   charts['exp']=new Chart(document.getElementById('ch-exp'),{
     type:'bar',
     data:{labels:expCats.map(x=>x.l),
       datasets:[{data:expCats.map(x=>x.v),backgroundColor:'#3B82F688',borderRadius:4,borderSkipped:false}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${money(ctx.parsed.x)}`}}},
+      layout:{padding:{right:48}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>` ${money(ctx.parsed.x)}`}},
+        datalabels:{
+          anchor:'end',align:'right',
+          formatter:(v)=>expTotal>0?(v/expTotal*100).toFixed(1)+'%':'',
+          font:{size:10,family:'Inter',weight:'600'},
+          color:'#475569'
+        }
+      },
       scales:{
         x:{grid:{color:'#F1F4F9'},ticks:{font:{size:10,family:'Inter'},color:'#94A3B8',callback:v=>v>=1000000?'$'+(v/1e6).toFixed(1)+'M':v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+v}},
         y:{grid:{display:false},ticks:{font:{size:11,family:'Inter'},color:'#475569'}}
       }
-    }
+    },
+    plugins:[ChartDataLabels]
   });
 }
 
