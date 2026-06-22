@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P&L Dashboard — Smart Beginnings</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F1F4F9;--surface:#fff;--border:#E2E8F0;
+  --text:#0F172A;--text-2:#475569;--text-3:#94A3B8;
+  --gold:#BF9B50;--green:#059669;--red:#DC2626;--blue:#2563EB;
+  --radius:14px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
+  --shadow-lg:0 4px 28px rgba(0,0,0,.1);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* Gate */
+#gate{position:fixed;inset:0;z-index:1000;background:#060A12;display:flex;align-items:center;justify-content:center;}
+.gate-box{background:#0B1120;border:1px solid rgba(191,155,80,.22);padding:52px 44px;width:100%;max-width:400px;text-align:center;}
+.gate-logo{height:24px;margin-bottom:32px;}
+.gate-title{font-size:1.5rem;font-weight:300;color:#EDE8DE;margin-bottom:6px;font-family:'Inter',sans-serif;}
+.gate-sub{font-size:.75rem;color:#545B6A;margin-bottom:28px;}
+.gate-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(191,155,80,.2);color:#EDE8DE;font-family:'Inter',sans-serif;font-size:.9rem;padding:13px 16px;outline:none;margin-bottom:12px;transition:border-color .2s;}
+.gate-input:focus{border-color:rgba(191,155,80,.6);}
+.gate-input::placeholder{color:#3D4456;}
+.gate-btn{width:100%;background:#BF9B50;color:#060A12;border:none;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;padding:14px;cursor:pointer;}
+.gate-btn:hover{background:#D4AF60;}
+.gate-err{font-size:.75rem;color:#EF4444;margin-top:10px;display:none;}
+
+/* App */
+#app{display:none;}
+
+/* Header */
+.hdr{background:#060A12;border-bottom:1px solid rgba(191,155,80,.15);height:60px;display:flex;align-items:center;padding:0 40px;gap:20px;}
+.hdr img{height:18px;flex-shrink:0;}
+.hdr-div{width:1px;height:22px;background:rgba(255,255,255,.1);}
+.back{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:#545B6A;text-decoration:none;transition:color .2s;white-space:nowrap;}
+.back:hover{color:#BF9B50;}
+.hdr-co{font-size:.82rem;font-weight:500;color:#EDE8DE;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hdr-actions{display:flex;align-items:center;gap:10px;margin-left:auto;}
+.upload-lbl{display:inline-flex;align-items:center;gap:7px;background:rgba(191,155,80,.1);border:1px solid rgba(191,155,80,.25);color:#BF9B50;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;padding:7px 16px;cursor:pointer;transition:background .2s;white-space:nowrap;}
+.upload-lbl:hover{background:rgba(191,155,80,.2);}
+.tpl-btn{font-size:.68rem;color:#545B6A;cursor:pointer;background:none;border:none;padding:7px;transition:color .2s;white-space:nowrap;}
+.tpl-btn:hover{color:#BF9B50;}
+#file-in{display:none;}
+
+/* Page */
+.page{max-width:1320px;margin:0 auto;padding:36px 40px;}
+
+/* Company bar */
+.co-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:32px;}
+.co-left{display:flex;align-items:center;gap:14px;}
+.co-icon{width:48px;height:48px;border-radius:12px;background:rgba(59,130,246,.1);font-size:1.3rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.co-h1{font-size:1.6rem;font-weight:300;letter-spacing:-.02em;color:var(--text);line-height:1.1;}
+.co-sub{font-size:.74rem;color:var(--text-3);margin-top:2px;}
+.co-badge{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;background:rgba(5,150,105,.1);color:#059669;border:1px solid rgba(5,150,105,.25);padding:5px 12px;border-radius:100px;}
+
+/* CSV banner */
+.csv-banner{background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.2);border-radius:10px;padding:12px 18px;margin-bottom:24px;display:none;align-items:center;gap:10px;font-size:.78rem;color:var(--text-2);}
+.csv-banner a{color:var(--blue);cursor:pointer;font-weight:500;}
+
+/* KPI row */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--k-clr,#2563EB);}
+.kpi-lbl{font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);font-weight:500;margin-bottom:9px;}
+.kpi-val{font-size:1.45rem;font-weight:700;letter-spacing:-.04em;line-height:1;font-family:'JetBrains Mono',monospace;}
+.kpi-sub{font-size:.7rem;color:var(--text-3);margin-top:7px;}
+.pos-val{color:var(--green);}
+.neg-val{color:var(--red);}
+
+/* Charts */
+.charts-row{display:grid;grid-template-columns:1fr 2fr;gap:18px;margin-bottom:24px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);}
+.chart-hdr{margin-bottom:18px;}
+.chart-ttl{font-size:.85rem;font-weight:600;color:var(--text);}
+.chart-sub{font-size:.7rem;color:var(--text-3);margin-top:2px;}
+.chart-wrap{position:relative;height:220px;}
+
+/* P&L Table */
+.pl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:40px;}
+.pl-hdr{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.pl-ttl{font-size:.88rem;font-weight:600;color:var(--text);}
+.pl-actions{display:flex;gap:10px;}
+.expand-all-btn{font-size:.68rem;color:var(--blue);cursor:pointer;background:none;border:none;padding:0;}
+
+.pl-wrap{overflow-x:auto;}
+table.pl{width:100%;border-collapse:collapse;}
+table.pl th{padding:10px 20px;text-align:left;font-size:.6rem;letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);font-weight:600;background:#FAFBFC;border-bottom:2px solid var(--border);white-space:nowrap;}
+table.pl th.r{text-align:right;}
+
+/* Row types */
+tr.pl-section td{background:#0F172A;color:#fff;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;padding:9px 20px;}
+tr.pl-section td.r{color:rgba(255,255,255,.5);}
+
+tr.pl-cat{cursor:pointer;transition:background .15s;}
+tr.pl-cat:hover{background:#F0F4FF;}
+tr.pl-cat td{padding:11px 20px;font-weight:600;font-size:.82rem;color:var(--text);border-bottom:1px solid #F1F4F9;}
+tr.pl-cat.expanded{background:#F8FAFF;}
+
+tr.pl-line td{padding:9px 20px;font-size:.8rem;color:var(--text-2);border-bottom:1px solid #F8FAFC;}
+
+tr.pl-subtotal td{padding:9px 20px;font-size:.8rem;font-weight:700;color:var(--text);background:#F4F6FA;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+
+tr.pl-total td{padding:11px 20px;font-size:.83rem;font-weight:700;color:var(--text);background:#EEF0F5;border-top:2px solid #CBD5E1;border-bottom:2px solid #CBD5E1;}
+
+tr.pl-summary td{padding:12px 20px;font-size:.84rem;font-weight:700;color:var(--text);}
+tr.pl-summary.positive td{background:rgba(5,150,105,.06);}
+tr.pl-summary.negative td{background:rgba(220,38,38,.05);}
+tr.pl-summary.final td{font-size:.92rem;border-top:3px double var(--border);}
+
+.expand-icon{display:inline-block;width:16px;color:var(--text-3);font-size:.8rem;transition:transform .2s;vertical-align:middle;}
+.r{text-align:right;font-family:'JetBrains Mono',monospace;font-size:.78rem;white-space:nowrap;}
+.pct-cell{text-align:right;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text-3);white-space:nowrap;}
+.pct-bar{display:inline-block;height:4px;background:var(--blue);border-radius:2px;margin-right:6px;vertical-align:middle;opacity:.35;}
+
+/* format guide */
+.fmt{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);font-size:.78rem;color:var(--text-2);line-height:1.8;}
+.fmt h3{font-size:.83rem;font-weight:600;color:var(--text);margin-bottom:10px;}
+code{background:#F1F4F9;border:1px solid var(--border);padding:1px 6px;border-radius:4px;font-size:.73rem;font-family:'JetBrains Mono',monospace;color:#E11D48;}
+
+@media(max-width:1024px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:768px){
+  .hdr{padding:0 16px;}.page{padding:20px 16px;}
+  .kpi-row{grid-template-columns:1fr 1fr;}
+  .charts-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-box">
+    <img src="LogoWhite.png" class="gate-logo" alt="Konfide Capital">
+    <div class="gate-title">Financial Portal</div>
+    <div class="gate-sub">Restricted — authorized personnel only</div>
+    <input type="password" id="gate-in" class="gate-input" placeholder="Enter access code" onkeydown="if(event.key==='Enter')auth()">
+    <button class="gate-btn" onclick="auth()">Access Portal</button>
+    <div class="gate-err" id="gate-err">Incorrect access code.</div>
+  </div>
+</div>
+
+<div id="app">
+  <header class="hdr">
+    <img src="LogoWhite.png" alt="Konfide Capital">
+    <div class="hdr-div"></div>
+    <a href="finance.html" class="back">← Portal</a>
+    <div class="hdr-div"></div>
+    <div class="hdr-co" id="hdr-co"></div>
+    <div class="hdr-actions">
+      <button class="tpl-btn" onclick="dlTemplate()">⬇ CSV Template</button>
+      <label class="upload-lbl" for="file-in">↑ Upload CSV</label>
+      <input type="file" id="file-in" accept=".csv" onchange="loadCSV(event)">
+    </div>
+  </header>
+
+  <div class="page">
+
+    <div class="co-bar">
+      <div class="co-left">
+        <div class="co-icon" id="co-icon">🏫</div>
+        <div>
+          <div class="co-h1" id="co-h1">Smart Beginnings</div>
+          <div class="co-sub">Profit & Loss — % of Total Income</div>
+        </div>
+      </div>
+      <div class="co-badge">Active</div>
+    </div>
+
+    <div class="csv-banner" id="csv-banner">
+      ✓ <span id="csv-msg">Data loaded.</span> <a onclick="resetData()">Reset to blank</a>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-row">
+      <div class="kpi" style="--k-clr:#2563EB;">
+        <div class="kpi-lbl">Total Income</div>
+        <div class="kpi-val" id="k-income">$0</div>
+        <div class="kpi-sub">All revenue sources</div>
+      </div>
+      <div class="kpi" style="--k-clr:#10B981;">
+        <div class="kpi-lbl">Gross Profit</div>
+        <div class="kpi-val" id="k-gp">$0</div>
+        <div class="kpi-sub" id="k-gp-pct">0.00% of income</div>
+      </div>
+      <div class="kpi" style="--k-clr:#64748B;">
+        <div class="kpi-lbl">Total Expenses</div>
+        <div class="kpi-val" id="k-exp">$0</div>
+        <div class="kpi-sub" id="k-exp-pct">0.00% of income</div>
+      </div>
+      <div class="kpi" style="--k-clr:#8B5CF6;">
+        <div class="kpi-lbl">Net Operating Income</div>
+        <div class="kpi-val" id="k-noi">$0</div>
+        <div class="kpi-sub" id="k-noi-pct">0.00% of income</div>
+      </div>
+      <div class="kpi" style="--k-clr:#EF4444;">
+        <div class="kpi-lbl">Net Income</div>
+        <div class="kpi-val" id="k-ni">$0</div>
+        <div class="kpi-sub" id="k-ni-pct">0.00% of income</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-hdr">
+          <div class="chart-ttl">Revenue Sources</div>
+          <div class="chart-sub">% of total income by category</div>
+        </div>
+        <div class="chart-wrap"><canvas id="ch-rev"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-hdr">
+          <div class="chart-ttl">Expense Breakdown</div>
+          <div class="chart-sub">Top expense categories</div>
+        </div>
+        <div class="chart-wrap"><canvas id="ch-exp"></canvas></div>
+      </div>
+    </div>
+
+    <!-- P&L Table -->
+    <div class="pl-card">
+      <div class="pl-hdr">
+        <div class="pl-ttl">Profit & Loss — All Dates</div>
+        <div class="pl-actions">
+          <button class="expand-all-btn" onclick="expandAll()">Expand All</button>
+          <button class="expand-all-btn" onclick="collapseAll()" style="margin-left:10px;color:var(--text-3);">Collapse All</button>
+        </div>
+      </div>
+      <div class="pl-wrap">
+        <table class="pl">
+          <thead>
+            <tr>
+              <th style="width:55%">Category</th>
+              <th class="r">Total</th>
+              <th class="r">% of Income</th>
+            </tr>
+          </thead>
+          <tbody id="pl-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Format guide -->
+    <div class="fmt">
+      <h3>📋 How to Upload Your QuickBooks P&L</h3>
+      Export your P&L from QuickBooks as CSV (<strong>Reports → Profit and Loss → Export → CSV</strong>). The uploader auto-matches line item names to this dashboard. Column names do <em>not</em> need to match exactly — values are matched by row label.<br><br>
+      Alternatively, use a simple 2-column CSV with headers <code>Label</code> and <code>Amount</code>:
+      <br><br>
+      <code>Label,Amount</code><br>
+      <code>Grants,220104.68</code><br>
+      <code>CCAP,658812.28</code><br>
+      <code>Tuition Express,1796327.38</code><br>
+      <code>Salaries & wages,907031.24</code><br>
+      <code>Rent,263300.00</code><br><br>
+      Click <strong>⬇ CSV Template</strong> above to download a pre-formatted starter file.
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Auth ──
+const PASS = 'Konfide2026!';
+function auth(){
+  if(document.getElementById('gate-in').value===PASS){
+    sessionStorage.setItem('kc_auth','1');
+    document.getElementById('gate').style.display='none';
+    document.getElementById('app').style.display='block';
+    init();
+  } else {
+    document.getElementById('gate-err').style.display='block';
+    document.getElementById('gate-in').value='';
+  }
+}
+if(sessionStorage.getItem('kc_auth')==='1'){
+  document.getElementById('gate').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+
+// ── Company config ──
+const COS = {
+  kirk:   {name:'Smart Beginnings Kirk & Butterfield', icon:'🏫', accent:'#3B82F6'},
+  ogden:  {name:'Smart Beginnings Ogden & IL 59',     icon:'🏫', accent:'#8B5CF6'},
+  oswego: {name:'Smart Beginnings Oswego',            icon:'🏫', accent:'#14B8A6'},
+};
+
+// ── P&L item definitions ──
+// type: section | category | line | subtotal | total | summary
+// kids: direct child line item ids (for computing subtotals)
+const ITEMS = [
+  // INCOME
+  {id:'s_inc',     type:'section',  label:'Income',                               level:0},
+  {id:'c_svc',     type:'category', label:'Services',                              level:1, parent:null},
+  {id:'grants',    type:'line',     label:'Grants',                                level:2, parent:'c_svc',  csv:['grants']},
+  {id:'ccap',      type:'line',     label:'CCAP',                                  level:2, parent:'c_svc',  csv:['ccap']},
+  {id:'daycare',   type:'line',     label:'Daycare Resource',                      level:2, parent:'c_svc',  csv:['daycare resource']},
+  {id:'tuition',   type:'line',     label:'Tuition Express',                       level:2, parent:'c_svc',  csv:['tution express','tuition express']},
+  {id:'t_svc',     type:'subtotal', label:'Total for Services',                    level:1, parent:'c_svc',  kids:['grants','ccap','daycare','tuition']},
+  {id:'t_inc',     type:'total',    label:'Total for Income',                      level:0, kids:['grants','ccap','daycare','tuition']},
+
+  // COGS
+  {id:'s_cogs',    type:'section',  label:'Cost of Goods Sold',                   level:0},
+  {id:'cogs',      type:'line',     label:'Cost of Goods Sold',                   level:1, parent:null, csv:['cost of goods sold']},
+
+  // GROSS PROFIT
+  {id:'gp',        type:'summary',  label:'Gross Profit',                          level:0, formula:'gp'},
+
+  // EXPENSES
+  {id:'s_exp',     type:'section',  label:'Expenses',                              level:0},
+  {id:'advert',    type:'line',     label:'Advertising & marketing',               level:1, parent:null, csv:['advertising & marketing','advertising and marketing']},
+  {id:'biz_lic',   type:'line',     label:'Business licenses',                     level:1, parent:null, csv:['business licenses']},
+  {id:'charity',   type:'line',     label:'Contributions to charities',            level:1, parent:null, csv:['contributions to charities']},
+
+  {id:'c_emp',     type:'category', label:'Employee benefits',                     level:1, parent:null},
+  {id:'retire',    type:'line',     label:'Employee retirement plans',             level:2, parent:'c_emp', csv:['employee retirement plans']},
+  {id:'health',    type:'line',     label:'Health insurance & accident plans',     level:2, parent:'c_emp', csv:['health insurance & accident plans']},
+  {id:'wcomp',     type:'line',     label:"Workers' compensation insurance",       level:2, parent:'c_emp', csv:["workers' compensation insurance","workers compensation insurance"]},
+  {id:'t_emp',     type:'subtotal', label:'Total for Employee benefits',           level:1, parent:'c_emp', kids:['retire','health','wcomp']},
+
+  {id:'entertain', type:'line',     label:'Entertainment',                         level:1, parent:null, csv:['entertainment']},
+
+  {id:'c_genbiz',  type:'category', label:'General business expenses',             level:1, parent:null},
+  {id:'bankfees',  type:'line',     label:'Bank fees & service charges',           level:2, parent:'c_genbiz', csv:['bank fees & service charges']},
+  {id:'cont_ed',   type:'line',     label:'Continuing education',                  level:2, parent:'c_genbiz', csv:['continuing education']},
+  {id:'member',    type:'line',     label:'Memberships & subscriptions',           level:2, parent:'c_genbiz', csv:['memberships & subscriptions']},
+  {id:'stf_bonus', type:'line',     label:'Staff Bonus',                           level:2, parent:'c_genbiz', csv:['staff bonus']},
+  {id:'t_genbiz',  type:'subtotal', label:'Total for General business expenses',   level:1, parent:'c_genbiz', kids:['bankfees','cont_ed','member','stf_bonus']},
+
+  {id:'c_ins',     type:'category', label:'Insurance',                             level:1, parent:null},
+  {id:'c_bizins',  type:'category', label:'Business insurance',                    level:2, parent:'c_ins'},
+  {id:'bizins',    type:'line',     label:'Business insurance',                    level:3, parent:'c_bizins', csv:['business insurance']},
+  {id:'westbend',  type:'line',     label:'West Bend',                             level:3, parent:'c_bizins', csv:['west bend']},
+  {id:'t_bizins',  type:'subtotal', label:'Total for Business insurance',          level:2, parent:'c_bizins', kids:['bizins','westbend']},
+  {id:'t_ins',     type:'subtotal', label:'Total for Insurance',                   level:1, parent:'c_ins',    kids:['bizins','westbend']},
+
+  {id:'c_int',     type:'category', label:'Interest paid',                         level:1, parent:null},
+  {id:'loan_int',  type:'line',     label:'Business loan interest',                level:2, parent:'c_int', csv:['business loan interest']},
+  {id:'cc_int',    type:'line',     label:'Credit card interest',                  level:2, parent:'c_int', csv:['credit card interest']},
+  {id:'t_int',     type:'subtotal', label:'Total for Interest paid',               level:1, parent:'c_int', kids:['loan_int','cc_int']},
+
+  {id:'c_legal',   type:'category', label:'Legal & accounting services',           level:1, parent:null},
+  {id:'kei',       type:'line',     label:'Konfide Education Group Inc.',          level:2, parent:'c_legal', csv:['konfide education group inc.','konfide education group']},
+  {id:'kmgmt',     type:'line',     label:'Konfide Management Fee',                level:2, parent:'c_legal', csv:['konfide management fee']},
+  {id:'legalfee',  type:'line',     label:'Legal Fees',                            level:2, parent:'c_legal', csv:['legal fees']},
+  {id:'nurse',     type:'line',     label:'Nurse visit',                           level:2, parent:'c_legal', csv:['nurse visit']},
+  {id:'stf_cert',  type:'line',     label:'Staff Certification',                   level:2, parent:'c_legal', csv:['staff certification']},
+  {id:'t_legal',   type:'subtotal', label:'Total for Legal & accounting services', level:1, parent:'c_legal', kids:['kei','kmgmt','legalfee','nurse','stf_cert']},
+
+  {id:'meals',     type:'line',     label:'Meals',                                 level:1, parent:null, csv:['meals']},
+
+  {id:'c_office',  type:'category', label:'Office expenses',                       level:1, parent:null},
+  {id:'merchant',  type:'line',     label:'Merchant account fees',                 level:2, parent:'c_office', csv:['merchant account fees']},
+  {id:'ofc_sup',   type:'line',     label:'Office supplies',                       level:2, parent:'c_office', csv:['office supplies']},
+  {id:'shipping',  type:'line',     label:'Shipping & postage',                    level:2, parent:'c_office', csv:['shipping & postage']},
+  {id:'software',  type:'line',     label:'Software & apps',                       level:2, parent:'c_office', csv:['software & apps']},
+  {id:'t_office',  type:'subtotal', label:'Total for Office expenses',             level:1, parent:'c_office', kids:['merchant','ofc_sup','shipping','software']},
+
+  {id:'c_pay',     type:'category', label:'Payroll expenses',                      level:1, parent:null},
+  {id:'payroll',   type:'line',     label:'Payroll expenses',                      level:2, parent:'c_pay', csv:['payroll expenses']},
+  {id:'salaries',  type:'line',     label:'Salaries & wages',                      level:2, parent:'c_pay', csv:['salaries & wages']},
+  {id:'t_pay',     type:'subtotal', label:'Total for Payroll expenses',            level:1, parent:'c_pay', kids:['payroll','salaries']},
+
+  {id:'rent',      type:'line',     label:'Rent',                                  level:1, parent:null, csv:['rent']},
+
+  {id:'c_rep',     type:'category', label:'Repairs & maintenance',                 level:1, parent:null},
+  {id:'cleaning',  type:'line',     label:'Cleaning Service',                      level:2, parent:'c_rep', csv:['cleaning service']},
+  {id:'hvac',      type:'line',     label:'Heating & Cooling',                     level:2, parent:'c_rep', csv:['heating & cooling']},
+  {id:'inspect',   type:'line',     label:'Inspections',                           level:2, parent:'c_rep', csv:['inspections']},
+  {id:'landscap',  type:'line',     label:'Landscaping',                           level:2, parent:'c_rep', csv:['landscaping']},
+  {id:'orkin',     type:'line',     label:'Orkin',                                 level:2, parent:'c_rep', csv:['orkin']},
+  {id:'parts',     type:'line',     label:'Parts & Materials',                     level:2, parent:'c_rep', csv:['parts & materials']},
+  {id:'snowplow',  type:'line',     label:'Snow Plow',                             level:2, parent:'c_rep', csv:['snow plow']},
+  {id:'t_rep',     type:'subtotal', label:'Total for Repairs & maintenance',       level:1, parent:'c_rep', kids:['cleaning','hvac','inspect','landscap','orkin','parts','snowplow']},
+
+  {id:'c_sup',     type:'category', label:'Supplies',                              level:1, parent:null},
+  {id:'sup_base',  type:'line',     label:'Supplies',                              level:2, parent:'c_sup', csv:['supplies']},
+  {id:'amazon',    type:'line',     label:'Amazon',                                level:2, parent:'c_sup', csv:['amazon']},
+  {id:'sup_mat',   type:'line',     label:'Supplies & materials',                  level:2, parent:'c_sup', csv:['supplies & materials']},
+  {id:'t_sup',     type:'subtotal', label:'Total for Supplies',                    level:1, parent:'c_sup', kids:['sup_base','amazon','sup_mat']},
+
+  {id:'taxes',     type:'line',     label:'Taxes paid',                            level:1, parent:null, csv:['taxes paid']},
+  {id:'travel',    type:'line',     label:'Travel',                                level:1, parent:null, csv:['travel']},
+
+  {id:'c_util',    type:'category', label:'Utilities',                             level:1, parent:null},
+  {id:'util_base', type:'line',     label:'Utilities',                             level:2, parent:'c_util', csv:['utilities']},
+  {id:'waste',     type:'line',     label:'Disposal & waste fees',                 level:2, parent:'c_util', csv:['disposal & waste fees']},
+  {id:'electric',  type:'line',     label:'Electricity',                           level:2, parent:'c_util', csv:['electricity']},
+  {id:'internet',  type:'line',     label:'Internet & TV services',                level:2, parent:'c_util', csv:['internet & tv services']},
+  {id:'water',     type:'line',     label:'Water & sewer',                         level:2, parent:'c_util', csv:['water & sewer']},
+  {id:'t_util',    type:'subtotal', label:'Total for Utilities',                   level:1, parent:'c_util', kids:['util_base','waste','electric','internet','water']},
+
+  {id:'t_exp',     type:'total',    label:'Total for Expenses',                    level:0,
+    kids:['advert','biz_lic','charity','retire','health','wcomp','entertain','bankfees','cont_ed','member','stf_bonus',
+          'bizins','westbend','loan_int','cc_int','kei','kmgmt','legalfee','nurse','stf_cert','meals',
+          'merchant','ofc_sup','shipping','software','payroll','salaries','rent',
+          'cleaning','hvac','inspect','landscap','orkin','parts','snowplow',
+          'sup_base','amazon','sup_mat','taxes','travel','util_base','waste','electric','internet','water']},
+  {id:'noi',       type:'summary',  label:'Net Operating Income',                  level:0, formula:'noi'},
+
+  // OTHER INCOME / OTHER EXPENSES
+  {id:'s_othinc',  type:'section',  label:'Other Income',                          level:0},
+  {id:'s_othexp',  type:'section',  label:'Other Expenses',                        level:0},
+  {id:'c_veh',     type:'category', label:'Vehicle expenses',                      level:1, parent:null},
+  {id:'veh_exp',   type:'line',     label:'Vehicle expenses',                      level:2, parent:'c_veh', csv:['vehicle expenses']},
+  {id:'veh_gas',   type:'line',     label:'Vehicle gas & fuel',                    level:2, parent:'c_veh', csv:['vehicle gas & fuel']},
+  {id:'t_veh',     type:'subtotal', label:'Total for Vehicle expenses',            level:1, parent:'c_veh', kids:['veh_exp','veh_gas']},
+  {id:'t_othexp',  type:'total',    label:'Total for Other Expenses',              level:0, kids:['veh_exp','veh_gas']},
+  {id:'net_other', type:'summary',  label:'Net Other Income',                      level:0, formula:'net_other'},
+  {id:'ni',        type:'summary',  label:'Net Income',                            level:0, formula:'ni', final:true},
+];
+
+// ── State ──
+let vals = {};
+const expanded = new Set();
+let co = 'kirk';
+let charts = {};
+
+// ── Compute ──
+function sum(ids){ return ids.reduce((s,id) => s+(vals[id]||0), 0); }
+
+function compute(){
+  const v = {...vals};
+  // Income
+  v.t_svc = sum(['grants','ccap','daycare','tuition']);
+  v.t_inc  = v.t_svc;
+  v.cogs   = vals.cogs||0;
+  v.gp     = v.t_inc - v.cogs;
+  // Expense subtotals
+  v.t_emp    = sum(['retire','health','wcomp']);
+  v.t_genbiz = sum(['bankfees','cont_ed','member','stf_bonus']);
+  v.t_bizins = sum(['bizins','westbend']);
+  v.t_ins    = v.t_bizins;
+  v.t_int    = sum(['loan_int','cc_int']);
+  v.t_legal  = sum(['kei','kmgmt','legalfee','nurse','stf_cert']);
+  v.t_office = sum(['merchant','ofc_sup','shipping','software']);
+  v.t_pay    = sum(['payroll','salaries']);
+  v.t_rep    = sum(['cleaning','hvac','inspect','landscap','orkin','parts','snowplow']);
+  v.t_sup    = sum(['sup_base','amazon','sup_mat']);
+  v.t_util   = sum(['util_base','waste','electric','internet','water']);
+  v.t_exp    = sum(['advert','biz_lic','charity','retire','health','wcomp','entertain',
+                    'bankfees','cont_ed','member','stf_bonus','bizins','westbend',
+                    'loan_int','cc_int','kei','kmgmt','legalfee','nurse','stf_cert','meals',
+                    'merchant','ofc_sup','shipping','software','payroll','salaries','rent',
+                    'cleaning','hvac','inspect','landscap','orkin','parts','snowplow',
+                    'sup_base','amazon','sup_mat','taxes','travel',
+                    'util_base','waste','electric','internet','water']);
+  v.noi      = v.gp - v.t_exp;
+  v.t_veh    = sum(['veh_exp','veh_gas']);
+  v.t_othexp = v.t_veh;
+  v.net_other = -v.t_othexp;
+  v.ni       = v.noi + v.net_other;
+  return v;
+}
+
+// ── Visibility ──
+function visible(item){
+  if(!item.parent) return true;
+  if(!expanded.has(item.parent)) return false;
+  const par = ITEMS.find(i=>i.id===item.parent);
+  return par ? visible(par) : true;
+}
+
+// ── Format ──
+function money(n){
+  if(n===0) return '$0.00';
+  const abs = Math.abs(n);
+  const s = abs.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return (n<0?'-':'')+'$'+s;
+}
+function pct(n, total){
+  if(!total) return '—';
+  return ((n/total)*100).toFixed(2)+'%';
+}
+
+// ── Render Table ──
+function renderTable(){
+  const c = compute();
+  const totalInc = c.t_inc;
+  const body = document.getElementById('pl-body');
+  let html = '';
+
+  ITEMS.forEach(item => {
+    const v = c[item.id] ?? (item.type==='line'?(vals[item.id]||0):0);
+    const p = pct(v, totalInc);
+    const vis = visible(item);
+    const disp = vis ? '' : 'display:none;';
+    const ind = item.level * 20;
+    const isExp = expanded.has(item.id);
+    const icon = item.type==='category' ? `<span class="expand-icon">${isExp?'▾':'▸'}</span>` : '';
+    const hasKids = item.type==='category';
+
+    const pctBarW = totalInc>0 && v>0 ? Math.min((v/totalInc)*100*3, 60) : 0;
+    const pctDisplay = v !== 0 ? `<span class="pct-bar" style="width:${pctBarW}px"></span>${p}` : (vis && item.type!=='section' && totalInc>0 ? '0.00%' : '');
+
+    switch(item.type){
+      case 'section':
+        html+=`<tr class="pl-section" id="r-${item.id}"><td>${item.label}</td><td class="r"></td><td class="pct-cell"></td></tr>`;
+        break;
+      case 'category':
+        html+=`<tr class="pl-cat${isExp?' expanded':''}" id="r-${item.id}" onclick="toggle('${item.id}')" style="${disp}">
+          <td style="padding-left:${ind+20}px">${icon} ${item.label}</td>
+          <td class="r">${v?money(v):''}</td>
+          <td class="pct-cell">${v?pctDisplay:''}</td>
+        </tr>`;
+        break;
+      case 'line':
+        html+=`<tr class="pl-line" id="r-${item.id}" style="${disp}">
+          <td style="padding-left:${ind+20}px">${item.label}</td>
+          <td class="r">${v?money(v):''}</td>
+          <td class="pct-cell">${v?pctDisplay:''}</td>
+        </tr>`;
+        break;
+      case 'subtotal':
+        html+=`<tr class="pl-subtotal" id="r-${item.id}" style="${disp}">
+          <td style="padding-left:${ind+20}px">${item.label}</td>
+          <td class="r">${money(v)}</td>
+          <td class="pct-cell">${pctDisplay}</td>
+        </tr>`;
+        break;
+      case 'total':
+        html+=`<tr class="pl-total" id="r-${item.id}">
+          <td>${item.label}</td>
+          <td class="r">${money(v)}</td>
+          <td class="pct-cell">${pctDisplay}</td>
+        </tr>`;
+        break;
+      case 'summary':
+        const cls = v>=0?'positive':'negative';
+        html+=`<tr class="pl-summary ${cls}${item.final?' final':''}" id="r-${item.id}">
+          <td><strong>${item.label}</strong></td>
+          <td class="r" style="color:${v>=0?'var(--green)':'var(--red)'}"><strong>${money(v)}</strong></td>
+          <td class="pct-cell" style="color:${v>=0?'var(--green)':'var(--red)'}"><strong>${pct(v,totalInc)}</strong></td>
+        </tr>`;
+        break;
+    }
+  });
+
+  body.innerHTML = html;
+  updateKPIs(c);
+  updateCharts(c);
+}
+
+// ── Toggle ──
+function toggle(id){
+  if(expanded.has(id)){
+    expanded.delete(id);
+    // Collapse nested categories too
+    ITEMS.forEach(i=>{ if(i.parent===id && i.type==='category') collapseDeep(i.id); });
+  } else {
+    expanded.add(id);
+  }
+  renderTable();
+}
+function collapseDeep(id){
+  expanded.delete(id);
+  ITEMS.forEach(i=>{ if(i.parent===id && i.type==='category') collapseDeep(i.id); });
+}
+function expandAll(){ ITEMS.forEach(i=>{ if(i.type==='category') expanded.add(i.id); }); renderTable(); }
+function collapseAll(){ expanded.clear(); renderTable(); }
+
+// ── KPIs ──
+function fmt(n){ return (n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}); }
+function updateKPIs(c){
+  const ti = c.t_inc;
+  document.getElementById('k-income').textContent = fmt(ti);
+  document.getElementById('k-gp').textContent     = fmt(c.gp);
+  document.getElementById('k-gp').className       = 'kpi-val '+(c.gp>=0?'pos-val':'neg-val');
+  document.getElementById('k-gp-pct').textContent = pct(c.gp,ti)+' of income';
+  document.getElementById('k-exp').textContent    = fmt(c.t_exp);
+  document.getElementById('k-exp-pct').textContent= pct(c.t_exp,ti)+' of income';
+  document.getElementById('k-noi').textContent    = fmt(c.noi);
+  document.getElementById('k-noi').className      = 'kpi-val '+(c.noi>=0?'pos-val':'neg-val');
+  document.getElementById('k-noi-pct').textContent= pct(c.noi,ti)+' of income';
+  document.getElementById('k-ni').textContent     = fmt(c.ni);
+  document.getElementById('k-ni').className       = 'kpi-val '+(c.ni>=0?'pos-val':'neg-val');
+  document.getElementById('k-ni-pct').textContent = pct(c.ni,ti)+' of income';
+}
+
+// ── Charts ──
+function destroyChart(k){ if(charts[k]){charts[k].destroy();delete charts[k];} }
+function updateCharts(c){
+  // Revenue donut
+  destroyChart('rev');
+  const revData = [vals.grants||0, vals.ccap||0, vals.daycare||0, vals.tuition||0];
+  charts['rev'] = new Chart(document.getElementById('ch-rev'),{
+    type:'doughnut',
+    data:{
+      labels:['Grants','CCAP','Daycare Resource','Tuition Express'],
+      datasets:[{data:revData, backgroundColor:['#2563EB','#7C3AED','#059669','#D97706'], borderWidth:0, hoverOffset:6}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{display:true,position:'bottom',labels:{font:{size:11,family:'Inter'},color:'#64748B',padding:12,boxWidth:9,boxHeight:9}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${money(ctx.parsed)}`}}}}
+  });
+
+  // Expense horizontal bar
+  destroyChart('exp');
+  const expCats = [
+    {l:'Payroll',    v:c.t_pay},
+    {l:'Legal & Acctg', v:c.t_legal},
+    {l:'Rent',       v:vals.rent||0},
+    {l:'Meals',      v:vals.meals||0},
+    {l:'Office',     v:c.t_office},
+    {l:'Repairs',    v:c.t_rep},
+    {l:'Utilities',  v:c.t_util},
+    {l:'Interest',   v:c.t_int},
+    {l:'Insurance',  v:c.t_ins},
+    {l:'Emp Benefits',v:c.t_emp},
+    {l:'Vehicle',    v:c.t_veh},
+    {l:'Supplies',   v:c.t_sup},
+    {l:'Gen Business',v:c.t_genbiz},
+    {l:'Advertising',v:vals.advert||0},
+  ].filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,10);
+
+  charts['exp'] = new Chart(document.getElementById('ch-exp'),{
+    type:'bar',
+    data:{
+      labels:expCats.map(x=>x.l),
+      datasets:[{data:expCats.map(x=>x.v), backgroundColor:'#3B82F688', borderRadius:4, borderSkipped:false}]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:ctx=>` ${money(ctx.parsed.x)}`}}},
+      scales:{
+        x:{grid:{color:'#F1F4F9'}, ticks:{font:{size:10,family:'Inter'},color:'#94A3B8',callback:v=>v>=1000000?'$'+(v/1000000).toFixed(1)+'M':v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+v}},
+        y:{grid:{display:false}, ticks:{font:{size:11,family:'Inter'},color:'#475569'}}
+      }
+    }
+  });
+}
+
+// ── CSV Upload ──
+function loadCSV(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const text = ev.target.result;
+    const newVals = parseCSV(text);
+    const count = Object.keys(newVals).length;
+    if(count===0){ alert('No matching line items found. Check the format guide.'); return; }
+    vals = newVals;
+    const banner = document.getElementById('csv-banner');
+    document.getElementById('csv-msg').innerHTML = `<strong>${count} items</strong> loaded from <strong>${file.name}</strong>.`;
+    banner.style.display = 'flex';
+    renderTable();
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+function parseCSV(text){
+  const result = {};
+  const lines = text.split(/\r?\n/);
+  lines.forEach(line => {
+    const cols = parseLine(line);
+    if(cols.length < 2) return;
+    const label = cols[0].replace(/^"|"$/g,'').trim().toLowerCase();
+    if(!label) return;
+    let amount = 0;
+    for(let i=1;i<cols.length;i++){
+      const raw = cols[i].replace(/^"|"$/g,'').replace(/[$,%()]/g,'').replace(/,/g,'').trim();
+      const n = parseFloat(raw);
+      if(!isNaN(n) && n!==0){amount=Math.abs(n);break;}
+    }
+    if(!amount) return;
+    ITEMS.forEach(item => {
+      if(item.csv && item.csv.some(k=>k===label)) result[item.id]=amount;
+    });
+  });
+  return result;
+}
+
+function parseLine(line){
+  const result=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'){inQ=!inQ;}
+    else if(line[i]===',' && !inQ){result.push(cur);cur='';}
+    else cur+=line[i];
+  }
+  result.push(cur); return result;
+}
+
+function resetData(){ vals={}; document.getElementById('csv-banner').style.display='none'; renderTable(); }
+
+// ── CSV Template ──
+function dlTemplate(){
+  const rows = [
+    'Label,Amount',
+    'Grants,0',
+    'CCAP,0',
+    'Daycare Resource,0',
+    'Tution Express,0',
+    'Advertising & marketing,0',
+    'Business licenses,0',
+    'Contributions to charities,0',
+    'Employee retirement plans,0',
+    'Health insurance & accident plans,0',
+    "Workers' compensation insurance,0",
+    'Entertainment,0',
+    'Bank fees & service charges,0',
+    'Continuing education,0',
+    'Memberships & subscriptions,0',
+    'Staff Bonus,0',
+    'Business insurance,0',
+    'West Bend,0',
+    'Business loan interest,0',
+    'Credit card interest,0',
+    'Konfide Education Group Inc.,0',
+    'Konfide Management Fee,0',
+    'Legal Fees,0',
+    'Nurse visit,0',
+    'Staff Certification,0',
+    'Meals,0',
+    'Merchant account fees,0',
+    'Office supplies,0',
+    'Shipping & postage,0',
+    'Software & apps,0',
+    'Payroll expenses,0',
+    'Salaries & wages,0',
+    'Rent,0',
+    'Cleaning Service,0',
+    'Heating & Cooling,0',
+    'Inspections,0',
+    'Landscaping,0',
+    'Orkin,0',
+    'Parts & Materials,0',
+    'Snow Plow,0',
+    'Supplies,0',
+    'Amazon,0',
+    'Supplies & materials,0',
+    'Taxes paid,0',
+    'Travel,0',
+    'Utilities,0',
+    'Disposal & waste fees,0',
+    'Electricity,0',
+    'Internet & TV services,0',
+    'Water & sewer,0',
+    'Vehicle expenses,0',
+    'Vehicle gas & fuel,0',
+  ];
+  const blob = new Blob([rows.join('\n')],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${co}_pl_template.csv`;
+  a.click();
+}
+
+// ── Init ──
+function init(){
+  const p = new URLSearchParams(window.location.search);
+  co = p.get('co')||'kirk';
+  if(!COS[co]) co='kirk';
+  const cfg = COS[co];
+  document.title = cfg.name+' P&L — Konfide Capital';
+  document.getElementById('hdr-co').textContent = cfg.name;
+  document.getElementById('co-icon').textContent = cfg.icon;
+  document.getElementById('co-icon').style.background = cfg.accent+'22';
+  document.getElementById('co-h1').textContent = cfg.name;
+  renderTable();
+}
+
+if(sessionStorage.getItem('kc_auth')==='1') init();
+</script>
+</body>
+</html>
