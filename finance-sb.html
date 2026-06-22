@@ -400,7 +400,8 @@ const ITEMS = [
   {id:'c_pay',     type:'category', label:'Payroll expenses',                      level:1, parent:null},
   {id:'payroll',   type:'line',     label:'Payroll expenses',                      level:2, parent:'c_pay', csv:['payroll expenses']},
   {id:'salaries',  type:'line',     label:'Salaries & wages',                      level:2, parent:'c_pay', csv:['salaries & wages']},
-  {id:'t_pay',     type:'subtotal', label:'Total for Payroll expenses',            level:1, parent:'c_pay', kids:['payroll','salaries']},
+  {id:'taxes',     type:'line',     label:'Payroll tax',                           level:2, parent:'c_pay', csv:['taxes paid','payroll tax']},
+  {id:'t_pay',     type:'subtotal', label:'Total for Payroll expenses',            level:1, parent:'c_pay', kids:['payroll','salaries','taxes']},
 
   {id:'rent',      type:'line',     label:'Rent',                                  level:1, parent:null, csv:['rent']},
 
@@ -420,7 +421,6 @@ const ITEMS = [
   {id:'sup_mat',   type:'line',     label:'Supplies & materials',                  level:2, parent:'c_sup', csv:['supplies & materials']},
   {id:'t_sup',     type:'subtotal', label:'Total for Supplies',                    level:1, parent:'c_sup', kids:['sup_base','amazon','sup_mat']},
 
-  {id:'taxes',     type:'line',     label:'Taxes paid',                            level:1, parent:null, csv:['taxes paid']},
   {id:'travel',    type:'line',     label:'Travel',                                level:1, parent:null, csv:['travel']},
 
   {id:'c_util',    type:'category', label:'Utilities',                             level:1, parent:null},
