@@ -431,22 +431,18 @@ const ITEMS = [
   {id:'water',     type:'line',     label:'Water & sewer',                         level:2, parent:'c_util', csv:['water & sewer']},
   {id:'t_util',    type:'subtotal', label:'Total for Utilities',                   level:1, parent:'c_util', kids:['util_base','waste','electric','internet','water']},
 
+  {id:'c_veh',     type:'category', label:'Vehicle expenses',                      level:1, parent:null},
+  {id:'veh_exp',   type:'line',     label:'Vehicle expenses',                      level:2, parent:'c_veh', csv:['vehicle expenses']},
+  {id:'veh_gas',   type:'line',     label:'Vehicle gas & fuel',                    level:2, parent:'c_veh', csv:['vehicle gas & fuel']},
+  {id:'t_veh',     type:'subtotal', label:'Total for Vehicle expenses',            level:1, parent:'c_veh', kids:['veh_exp','veh_gas']},
+
   {id:'t_exp',     type:'total',    label:'Total for Expenses',                    level:0,
     kids:['advert','biz_lic','charity','retire','health','wcomp','entertain','bankfees','cont_ed','member','stf_bonus',
           'bizins','westbend','loan_int','cc_int','kei','kmgmt','legalfee','nurse','stf_cert','meals',
           'merchant','ofc_sup','shipping','software','payroll','salaries','rent',
           'cleaning','hvac','inspect','landscap','orkin','parts','snowplow',
-          'sup_base','amazon','sup_mat','taxes','travel','util_base','waste','electric','internet','water']},
-  {id:'noi',       type:'summary',  label:'Net Operating Income',                  level:0, formula:'noi'},
-
-  {id:'s_othinc',  type:'section',  label:'Other Income',                          level:0},
-  {id:'s_othexp',  type:'section',  label:'Other Expenses',                        level:0},
-  {id:'c_veh',     type:'category', label:'Vehicle expenses',                      level:1, parent:null},
-  {id:'veh_exp',   type:'line',     label:'Vehicle expenses',                      level:2, parent:'c_veh', csv:['vehicle expenses']},
-  {id:'veh_gas',   type:'line',     label:'Vehicle gas & fuel',                    level:2, parent:'c_veh', csv:['vehicle gas & fuel']},
-  {id:'t_veh',     type:'subtotal', label:'Total for Vehicle expenses',            level:1, parent:'c_veh', kids:['veh_exp','veh_gas']},
-  {id:'t_othexp',  type:'total',    label:'Total for Other Expenses',              level:0, kids:['veh_exp','veh_gas']},
-  {id:'net_other', type:'summary',  label:'Net Other Income',                      level:0, formula:'net_other'},
+          'sup_base','amazon','sup_mat','taxes','travel','util_base','waste','electric','internet','water',
+          'veh_exp','veh_gas']},
   {id:'ni',        type:'summary',  label:'Net Income',                            level:0, formula:'ni', final:true},
 ];
 
@@ -488,7 +484,8 @@ function compute(){
                     'merchant','ofc_sup','shipping','software','payroll','salaries','rent',
                     'cleaning','hvac','inspect','landscap','orkin','parts','snowplow',
                     'sup_base','amazon','sup_mat','taxes','travel',
-                    'util_base','waste','electric','internet','water'];
+                    'util_base','waste','electric','internet','water',
+                    'veh_exp','veh_gas'];
   const v = {};
   v.t_svc    = sum(inc_ids);
   v.t_inc    = v.t_svc;
@@ -501,16 +498,14 @@ function compute(){
   v.t_int    = sum(['loan_int','cc_int']);
   v.t_legal  = sum(['kei','kmgmt','legalfee','nurse','stf_cert']);
   v.t_office = sum(['merchant','ofc_sup','shipping','software']);
-  v.t_pay    = sum(['payroll','salaries']);
+  v.t_pay    = sum(['payroll','salaries','taxes']);
   v.t_rep    = sum(['cleaning','hvac','inspect','landscap','orkin','parts','snowplow']);
   v.t_sup    = sum(['sup_base','amazon','sup_mat']);
   v.t_util   = sum(['util_base','waste','electric','internet','water']);
+  v.t_veh    = sum(['veh_exp','veh_gas']);
   v.t_exp    = sum(exp_ids);
   v.noi      = v.gp - v.t_exp;
-  v.t_veh    = sum(['veh_exp','veh_gas']);
-  v.t_othexp = v.t_veh;
-  v.net_other= -v.t_othexp;
-  v.ni       = v.noi + v.net_other;
+  v.ni       = v.noi;
   // line items
   ITEMS.filter(i=>i.type==='line').forEach(i=>{ v[i.id]=getVal(i.id); });
   return v;
