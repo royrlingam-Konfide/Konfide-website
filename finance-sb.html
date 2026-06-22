@@ -398,7 +398,7 @@ const ITEMS = [
   {id:'t_office',  type:'subtotal', label:'Total for Office expenses',             level:1, parent:'c_office', kids:['merchant','ofc_sup','shipping','software']},
 
   {id:'c_pay',     type:'category', label:'Payroll expenses',                      level:1, parent:null},
-  {id:'payroll',   type:'line',     label:'Payroll expenses',                      level:2, parent:'c_pay', csv:['payroll expenses']},
+  {id:'payroll',   type:'line',     label:'ADP Fee',                               level:2, parent:'c_pay', csv:['adp fee','payroll expenses']},
   {id:'salaries',  type:'line',     label:'Salaries & wages',                      level:2, parent:'c_pay', csv:['salaries & wages']},
   {id:'taxes',     type:'line',     label:'Payroll tax',                           level:2, parent:'c_pay', csv:['taxes paid','payroll tax']},
   {id:'t_pay',     type:'subtotal', label:'Total for Payroll expenses',            level:1, parent:'c_pay', kids:['payroll','salaries','taxes']},
