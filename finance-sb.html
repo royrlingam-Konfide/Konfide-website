@@ -517,7 +517,6 @@ function compute(){
 
 // ── Period UI ──
 function setPeriod(p){
-  if(!isMultiPeriod && p!=='yearly') return;
   period = p;
   renderPeriodUI();
   renderAll();
@@ -529,21 +528,21 @@ function renderPeriodUI(){
   ['monthly','quarterly','yearly'].forEach(p=>{
     const el=document.getElementById('pm-'+p);
     el.classList.toggle('active',period===p);
-    el.disabled=(!isMultiPeriod && p!=='yearly');
+    el.disabled=false;
   });
-  document.getElementById('period-hint').style.display = (!isMultiPeriod)?'block':'none';
+  document.getElementById('period-hint').style.display = (!isMultiPeriod && period!=='yearly')?'block':'none';
 
-  const subEl  = document.getElementById('sub-pills');
-  const divEl  = document.getElementById('period-div');
+  const subEl = document.getElementById('sub-pills');
+  const divEl = document.getElementById('period-div');
   let html = '';
 
-  if(period==='monthly' && isMultiPeriod){
+  if(period==='monthly'){
     html = MONTH_LABELS.map((l,i)=>{
       const m=MONTHS[i];
       return `<button class="sp${m===selM?' active':''}" onclick="setM('${m}')">${l}</button>`;
     }).join('');
     divEl.style.display='block';
-  } else if(period==='quarterly' && isMultiPeriod){
+  } else if(period==='quarterly'){
     html = ['Q1','Q2','Q3','Q4'].map((l,i)=>{
       const q='q'+(i+1);
       return `<button class="sp${q===selQ?' active':''}" onclick="setQ('${q}')">${l}</button>`;
