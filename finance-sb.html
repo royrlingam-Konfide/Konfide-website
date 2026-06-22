@@ -273,7 +273,7 @@ code{background:#F1F4F9;border:1px solid var(--border);padding:1px 6px;border-ra
       <div class="pl-wrap">
         <table class="pl">
           <thead>
-            <tr>
+            <tr id="pl-thead-row">
               <th style="width:55%">Category</th>
               <th class="r">Total</th>
               <th class="r">% of Income</th>
@@ -584,10 +584,37 @@ function pct(n, total){ if(!total) return '—'; return ((n/total)*100).toFixed(
 // ── Render ──
 function renderAll(){ const c=compute(); renderTable(c); updateKPIs(c); updateCharts(c); }
 
+// Compute all values for a single month (used by quarterly multi-column view)
+function computeForMonth(m){
+  const savedPeriod=period, savedM=selM;
+  period='monthly'; selM=m;
+  const c=compute();
+  period=savedPeriod; selM=savedM;
+  return c;
+}
+
 function renderTable(c){
   const totalInc = c.t_inc;
+  const qMulti = (period==='quarterly' && isMultiPeriod);
+
+  // Update table header
+  const theadRow = document.getElementById('pl-thead-row');
+  if(qMulti){
+    const qMs = QMAP[selQ];
+    const labels = qMs.map(m => MONTH_LABELS[MONTHS.indexOf(m)]);
+    theadRow.innerHTML = `<th style="width:34%">Category</th>`
+      + labels.map(l=>`<th class="r">${l}</th>`).join('')
+      + `<th class="r" style="color:rgba(255,255,255,.45);font-weight:500">Q Total</th>`;
+  } else {
+    theadRow.innerHTML = `<th style="width:55%">Category</th><th class="r">Total</th><th class="r">% of Income</th>`;
+  }
+
+  // Per-month computed data for quarterly multi-column view
+  const monthData = qMulti ? QMAP[selQ].map(m => computeForMonth(m)) : null;
+
   const body = document.getElementById('pl-body');
   let html = '';
+
   ITEMS.forEach(item => {
     const v = c[item.id] !== undefined ? c[item.id] : getVal(item.id);
     const vis = visible(item);
@@ -595,45 +622,92 @@ function renderTable(c){
     const ind = item.level * 20;
     const isExp = expanded.has(item.id);
     const icon = item.type==='category' ? `<span class="expand-icon">${isExp?'▾':'▸'}</span>` : '';
-    const pctBarW = totalInc>0 && v>0 ? Math.min((v/totalInc)*100*3, 60) : 0;
-    const p = pct(v, totalInc);
-    const pctDisplay = v !== 0 ? `<span class="pct-bar" style="width:${pctBarW}px"></span>${p}` : (vis && item.type!=='section' && totalInc>0 ? '0.00%' : '');
 
-    switch(item.type){
-      case 'section':
-        html+=`<tr class="pl-section"><td>${item.label}</td><td class="r"></td><td class="pct-cell"></td></tr>`;
-        break;
-      case 'category':
-        html+=`<tr class="pl-cat${isExp?' expanded':''}" onclick="toggle('${item.id}')" style="${disp}">
-          <td style="padding-left:${ind+20}px">${icon} ${item.label}</td>
-          <td class="r">${v?money(v):''}</td>
-          <td class="pct-cell">${v?pctDisplay:''}</td></tr>`;
-        break;
-      case 'line':
-        html+=`<tr class="pl-line" style="${disp}">
-          <td style="padding-left:${ind+20}px">${item.label}</td>
-          <td class="r">${v?money(v):''}</td>
-          <td class="pct-cell">${v?pctDisplay:''}</td></tr>`;
-        break;
-      case 'subtotal':
-        html+=`<tr class="pl-subtotal" style="${disp}">
-          <td style="padding-left:${ind+20}px">${item.label}</td>
-          <td class="r">${money(v)}</td>
-          <td class="pct-cell">${pctDisplay}</td></tr>`;
-        break;
-      case 'total':
-        html+=`<tr class="pl-total">
-          <td>${item.label}</td>
-          <td class="r">${money(v)}</td>
-          <td class="pct-cell">${pctDisplay}</td></tr>`;
-        break;
-      case 'summary':
-        const cls = v>=0?'positive':'negative';
-        html+=`<tr class="pl-summary ${cls}${item.final?' final':''}">
-          <td><strong>${item.label}</strong></td>
-          <td class="r" style="color:${v>=0?'var(--green)':'var(--red)'}"><strong>${money(v)}</strong></td>
-          <td class="pct-cell" style="color:${v>=0?'var(--green)':'var(--red)'}"><strong>${pct(v,totalInc)}</strong></td></tr>`;
-        break;
+    if(qMulti){
+      // Quarterly multi-column: one column per month + Q total
+      const mvs = monthData.map(md => md[item.id] !== undefined ? md[item.id] : 0);
+      const qtotal = mvs.reduce((s,x)=>s+x,0);
+      const mc = (val) => val ? money(val) : '';
+      const mcColor = (val) => val>=0?'var(--green)':'var(--red)';
+
+      switch(item.type){
+        case 'section':
+          html+=`<tr class="pl-section"><td>${item.label}</td><td class="r"></td><td class="r"></td><td class="r"></td><td class="r"></td></tr>`;
+          break;
+        case 'category':
+          html+=`<tr class="pl-cat${isExp?' expanded':''}" onclick="toggle('${item.id}')" style="${disp}">
+            <td style="padding-left:${ind+20}px">${icon} ${item.label}</td>
+            ${mvs.map(x=>`<td class="r">${mc(x)}</td>`).join('')}
+            <td class="r" style="opacity:.6">${mc(qtotal)}</td></tr>`;
+          break;
+        case 'line':
+          html+=`<tr class="pl-line" style="${disp}">
+            <td style="padding-left:${ind+20}px">${item.label}</td>
+            ${mvs.map(x=>`<td class="r">${mc(x)}</td>`).join('')}
+            <td class="r" style="opacity:.6">${mc(qtotal)}</td></tr>`;
+          break;
+        case 'subtotal':
+          html+=`<tr class="pl-subtotal" style="${disp}">
+            <td style="padding-left:${ind+20}px">${item.label}</td>
+            ${mvs.map(x=>`<td class="r">${money(x)}</td>`).join('')}
+            <td class="r" style="opacity:.6">${money(qtotal)}</td></tr>`;
+          break;
+        case 'total':
+          html+=`<tr class="pl-total">
+            <td>${item.label}</td>
+            ${mvs.map(x=>`<td class="r">${money(x)}</td>`).join('')}
+            <td class="r" style="opacity:.6">${money(qtotal)}</td></tr>`;
+          break;
+        case 'summary':
+          const cls2=v>=0?'positive':'negative';
+          html+=`<tr class="pl-summary ${cls2}${item.final?' final':''}">
+            <td><strong>${item.label}</strong></td>
+            ${mvs.map(x=>`<td class="r" style="color:${mcColor(x)}"><strong>${money(x)}</strong></td>`).join('')}
+            <td class="r" style="color:${mcColor(qtotal)};opacity:.75"><strong>${money(qtotal)}</strong></td></tr>`;
+          break;
+      }
+    } else {
+      // Standard single-column view
+      const pctBarW = totalInc>0 && v>0 ? Math.min((v/totalInc)*100*3, 60) : 0;
+      const p = pct(v, totalInc);
+      const pctDisplay = v !== 0 ? `<span class="pct-bar" style="width:${pctBarW}px"></span>${p}` : (vis && item.type!=='section' && totalInc>0 ? '0.00%' : '');
+
+      switch(item.type){
+        case 'section':
+          html+=`<tr class="pl-section"><td>${item.label}</td><td class="r"></td><td class="pct-cell"></td></tr>`;
+          break;
+        case 'category':
+          html+=`<tr class="pl-cat${isExp?' expanded':''}" onclick="toggle('${item.id}')" style="${disp}">
+            <td style="padding-left:${ind+20}px">${icon} ${item.label}</td>
+            <td class="r">${v?money(v):''}</td>
+            <td class="pct-cell">${v?pctDisplay:''}</td></tr>`;
+          break;
+        case 'line':
+          html+=`<tr class="pl-line" style="${disp}">
+            <td style="padding-left:${ind+20}px">${item.label}</td>
+            <td class="r">${v?money(v):''}</td>
+            <td class="pct-cell">${v?pctDisplay:''}</td></tr>`;
+          break;
+        case 'subtotal':
+          html+=`<tr class="pl-subtotal" style="${disp}">
+            <td style="padding-left:${ind+20}px">${item.label}</td>
+            <td class="r">${money(v)}</td>
+            <td class="pct-cell">${pctDisplay}</td></tr>`;
+          break;
+        case 'total':
+          html+=`<tr class="pl-total">
+            <td>${item.label}</td>
+            <td class="r">${money(v)}</td>
+            <td class="pct-cell">${pctDisplay}</td></tr>`;
+          break;
+        case 'summary':
+          const cls=v>=0?'positive':'negative';
+          html+=`<tr class="pl-summary ${cls}${item.final?' final':''}">
+            <td><strong>${item.label}</strong></td>
+            <td class="r" style="color:${v>=0?'var(--green)':'var(--red)'}"><strong>${money(v)}</strong></td>
+            <td class="pct-cell" style="color:${v>=0?'var(--green)':'var(--red)'}"><strong>${pct(v,totalInc)}</strong></td></tr>`;
+          break;
+      }
     }
   });
   body.innerHTML = html;
