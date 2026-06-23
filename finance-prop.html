@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cash Flow Dashboard — Konfide Properties</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+:root{
+  --bg:#F1F4F9;--surface:#fff;--border:#E2E8F0;
+  --text:#0F172A;--text-2:#475569;--text-3:#94A3B8;
+  --gold:#BF9B50;--green:#059669;--red:#DC2626;--blue:#2563EB;
+  --radius:14px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* Gate */
+#gate{position:fixed;inset:0;z-index:1000;background:#060A12;display:flex;align-items:center;justify-content:center;}
+.gate-box{background:#0B1120;border:1px solid rgba(191,155,80,.22);padding:52px 44px;width:100%;max-width:400px;text-align:center;}
+.gate-logo{height:24px;margin-bottom:32px;}
+.gate-title{font-size:1.5rem;font-weight:300;color:#EDE8DE;margin-bottom:6px;}
+.gate-sub{font-size:.75rem;color:#545B6A;margin-bottom:28px;}
+.gate-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(191,155,80,.2);color:#EDE8DE;font-family:'Inter',sans-serif;font-size:.9rem;padding:13px 16px;outline:none;margin-bottom:12px;transition:border-color .2s;}
+.gate-input:focus{border-color:rgba(191,155,80,.6);}
+.gate-input::placeholder{color:#3D4456;}
+.gate-btn{width:100%;background:#BF9B50;color:#060A12;border:none;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;padding:14px;cursor:pointer;}
+.gate-btn:hover{background:#D4AF60;}
+.gate-err{font-size:.75rem;color:#EF4444;margin-top:10px;display:none;}
+
+#app{display:none;}
+
+/* Header */
+.hdr{background:#060A12;border-bottom:1px solid rgba(191,155,80,.15);height:60px;display:flex;align-items:center;padding:0 40px;gap:20px;}
+.hdr img{height:18px;flex-shrink:0;}
+.hdr-div{width:1px;height:22px;background:rgba(255,255,255,.1);}
+.back{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:#545B6A;text-decoration:none;transition:color .2s;white-space:nowrap;}
+.back:hover{color:#BF9B50;}
+.hdr-co{font-size:.82rem;font-weight:500;color:#EDE8DE;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hdr-actions{display:flex;align-items:center;gap:10px;margin-left:auto;}
+.upload-lbl{display:inline-flex;align-items:center;gap:7px;background:rgba(191,155,80,.1);border:1px solid rgba(191,155,80,.25);color:#BF9B50;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;padding:7px 16px;cursor:pointer;transition:background .2s;white-space:nowrap;}
+.upload-lbl:hover{background:rgba(191,155,80,.2);}
+.tpl-btn{font-size:.68rem;color:#545B6A;cursor:pointer;background:none;border:none;padding:7px;transition:color .2s;white-space:nowrap;}
+.tpl-btn:hover{color:#BF9B50;}
+#file-in{display:none;}
+
+.page{max-width:1320px;margin:0 auto;padding:36px 40px;}
+
+/* Company bar */
+.co-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:20px;}
+.co-left{display:flex;align-items:center;gap:14px;}
+.co-icon{width:48px;height:48px;border-radius:12px;font-size:1.3rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.co-h1{font-size:1.6rem;font-weight:300;letter-spacing:-.02em;color:var(--text);line-height:1.1;}
+.co-sub{font-size:.74rem;color:var(--text-3);margin-top:2px;}
+.co-badge{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;background:rgba(5,150,105,.1);color:#059669;border:1px solid rgba(5,150,105,.25);padding:5px 12px;border-radius:100px;}
+
+/* LLC switcher */
+.llc-bar{display:flex;gap:10px;margin-bottom:20px;}
+.llc-btn{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:.78rem;font-weight:500;color:var(--text-2);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;}
+.llc-btn:hover{border-color:#BF9B50;color:var(--text);}
+.llc-btn.active{background:#0F172A;color:#fff;border-color:#0F172A;}
+.llc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+/* Period bar */
+.period-bar{background:#0F1F3D;border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;box-shadow:0 4px 20px rgba(15,31,61,.3);display:flex;align-items:center;flex-wrap:wrap;gap:14px;}
+.period-label{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45);font-weight:600;white-space:nowrap;}
+.period-modes{display:flex;gap:3px;background:rgba(255,255,255,.07);border-radius:8px;padding:3px;}
+.pm{background:none;border:none;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;color:rgba(255,255,255,.55);padding:6px 16px;border-radius:6px;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap;}
+.pm.active{background:#BF9B50;color:#fff;font-weight:600;}
+.pm:hover:not(.active){color:#fff;background:rgba(255,255,255,.1);}
+.pm:disabled{opacity:.3;cursor:default;}
+.period-div{width:1px;height:20px;background:rgba(255,255,255,.12);}
+.sub-pills{display:flex;gap:5px;flex-wrap:wrap;}
+.sp{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);font-family:'Inter',sans-serif;font-size:.7rem;font-weight:500;color:rgba(255,255,255,.65);padding:5px 12px;border-radius:6px;cursor:pointer;transition:background .15s,color .15s,border-color .15s;white-space:nowrap;}
+.sp.active{background:#BF9B50;color:#fff;border-color:#BF9B50;font-weight:600;}
+.sp:hover:not(.active){background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.25);}
+.period-hint{font-size:.65rem;color:rgba(191,155,80,.7);font-style:italic;}
+
+/* CSV banner */
+.csv-banner{background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.2);border-radius:10px;padding:12px 18px;margin-bottom:20px;display:none;align-items:center;gap:10px;font-size:.78rem;color:var(--text-2);}
+.csv-banner a{color:var(--blue);cursor:pointer;font-weight:500;}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--k-clr,#2563EB);}
+.kpi-lbl{font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);font-weight:500;margin-bottom:9px;}
+.kpi-val{font-size:1.45rem;font-weight:700;letter-spacing:-.04em;line-height:1;font-family:'JetBrains Mono',monospace;}
+.kpi-sub{font-size:.7rem;color:var(--text-3);margin-top:7px;}
+
+/* Charts */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:22px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);}
+.chart-hdr{margin-bottom:18px;}
+.chart-ttl{font-size:.85rem;font-weight:600;color:var(--text);}
+.chart-sub{font-size:.7rem;color:var(--text-3);margin-top:2px;}
+.chart-wrap{position:relative;height:220px;}
+.trend-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:22px;display:none;}
+.trend-wrap{position:relative;height:200px;}
+
+/* Cash Flow Table */
+.pl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:36px;}
+.pl-hdr{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.pl-ttl{font-size:.88rem;font-weight:600;color:var(--text);}
+.pl-period-tag{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;background:#F0F4FF;color:var(--blue);border:1px solid #BFDBFE;padding:4px 10px;border-radius:6px;}
+.pl-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.pl-wrap{overflow-x:auto;}
+table.pl{width:100%;border-collapse:collapse;}
+table.pl th{padding:10px 20px;text-align:left;font-size:.6rem;letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);font-weight:600;background:#FAFBFC;border-bottom:2px solid var(--border);white-space:nowrap;}
+table.pl th.r{text-align:right;}
+tr.pl-section td{background:#0F172A;color:#fff;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;padding:9px 20px;}
+tr.pl-line td{padding:11px 20px;font-size:.82rem;color:var(--text);border-bottom:1px solid #F1F4F9;}
+tr.pl-total td{padding:11px 20px;font-size:.83rem;font-weight:700;color:var(--text);background:#EEF0F5;border-top:2px solid #CBD5E1;border-bottom:2px solid #CBD5E1;}
+tr.pl-summary td{padding:12px 20px;font-size:.84rem;font-weight:700;}
+tr.pl-summary.positive td{background:rgba(5,150,105,.06);}
+tr.pl-summary.negative td{background:rgba(220,38,38,.05);}
+tr.pl-summary.final td{font-size:.92rem;border-top:3px double var(--border);}
+.r{text-align:right;font-family:'JetBrains Mono',monospace;font-size:.78rem;white-space:nowrap;}
+.pct-cell{text-align:right;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text-3);white-space:nowrap;}
+.pct-bar{display:inline-block;height:4px;background:var(--blue);border-radius:2px;margin-right:6px;vertical-align:middle;opacity:.35;}
+
+@media(max-width:1024px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:768px){
+  .hdr{padding:0 16px;}.page{padding:20px 16px;}
+  .kpi-row{grid-template-columns:1fr 1fr;}
+  .charts-row{grid-template-columns:1fr;}
+  .period-bar{gap:10px;}
+  .llc-bar{flex-wrap:wrap;}
+}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-box">
+    <img src="LogoWhite.png" class="gate-logo" alt="Konfide Capital">
+    <div class="gate-title">Financial Portal</div>
+    <div class="gate-sub">Restricted — authorized personnel only</div>
+    <input type="password" id="gate-in" class="gate-input" placeholder="Enter access code" onkeydown="if(event.key==='Enter')auth()">
+    <button class="gate-btn" onclick="auth()">Access Portal</button>
+    <div class="gate-err" id="gate-err">Incorrect access code.</div>
+  </div>
+</div>
+
+<div id="app">
+  <header class="hdr">
+    <img src="LogoWhite.png" alt="Konfide Capital">
+    <div class="hdr-div"></div>
+    <a href="finance.html" class="back">&#8592; Portal</a>
+    <div class="hdr-div"></div>
+    <div class="hdr-co" id="hdr-co">Konfide Properties</div>
+    <div class="hdr-actions">
+      <button class="tpl-btn" onclick="dlTemplate()">&#8595; CSV Template</button>
+      <label class="upload-lbl" for="file-in">&#8593; Upload CSV</label>
+      <input type="file" id="file-in" accept=".csv" onchange="loadCSV(event)">
+    </div>
+  </header>
+
+  <div class="page">
+
+    <div class="co-bar">
+      <div class="co-left">
+        <div class="co-icon" id="co-icon">&#127970;</div>
+        <div>
+          <div class="co-h1" id="co-h1">Konfide Properties LLC</div>
+          <div class="co-sub" id="co-sub">Cash Flow Statement &middot; 2025&#8211;2026</div>
+        </div>
+      </div>
+      <div class="co-badge">Active</div>
+    </div>
+
+    <!-- LLC Switcher -->
+    <div class="llc-bar">
+      <button class="llc-btn active" id="llc-prop" onclick="switchLLC('prop')">
+        <span class="llc-dot" style="background:#10B981"></span>
+        Konfide Properties LLC
+        <span style="font-size:.65rem;opacity:.5;margin-left:4px;">6 properties</span>
+      </button>
+      <button class="llc-btn" id="llc-aurora" onclick="switchLLC('aurora')">
+        <span class="llc-dot" style="background:#F59E0B"></span>
+        Konfide Aurora LLC
+        <span style="font-size:.65rem;color:var(--text-3);margin-left:4px;">3 properties</span>
+      </button>
+    </div>
+
+    <div class="csv-banner" id="csv-banner">
+      &#10003; <span id="csv-msg">Data loaded.</span> <a onclick="resetData()" style="cursor:pointer">Reset</a>
+    </div>
+
+    <!-- Period bar -->
+    <div class="period-bar">
+      <div class="period-label">Year</div>
+      <div class="period-modes" id="year-modes">
+        <button class="pm active" id="pm-y2025" onclick="setYear(2025)">2025</button>
+        <button class="pm" id="pm-y2026" onclick="setYear(2026)">2026</button>
+        <button class="pm" id="pm-yall" onclick="setYear('all')">All</button>
+      </div>
+      <div class="period-div"></div>
+      <div class="period-label">View</div>
+      <div class="period-modes">
+        <button class="pm" id="pm-yearly"    onclick="setPeriod('yearly')">Yearly</button>
+        <button class="pm" id="pm-quarterly" onclick="setPeriod('quarterly')">Quarterly</button>
+        <button class="pm" id="pm-monthly"   onclick="setPeriod('monthly')">Monthly</button>
+      </div>
+      <div class="period-div" id="sub-div" style="display:none;"></div>
+      <div class="sub-pills" id="sub-pills"></div>
+      <div class="period-hint" id="period-hint" style="display:none;">Upload a CSV to enable period filtering</div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-row">
+      <div class="kpi" style="--k-clr:#10B981">
+        <div class="kpi-lbl">Rental Income</div>
+        <div class="kpi-val" style="color:var(--green)" id="kpi-income">&#8212;</div>
+        <div class="kpi-sub">Total revenue</div>
+      </div>
+      <div class="kpi" style="--k-clr:#EF4444">
+        <div class="kpi-lbl">Total Expenses</div>
+        <div class="kpi-val" style="color:var(--red)" id="kpi-exp">&#8212;</div>
+        <div class="kpi-sub">All costs</div>
+      </div>
+      <div class="kpi" style="--k-clr:#2563EB">
+        <div class="kpi-lbl">Net Cash Flow</div>
+        <div class="kpi-val" id="kpi-cf">&#8212;</div>
+        <div class="kpi-sub" id="kpi-cf-sub">Income minus expenses</div>
+      </div>
+      <div class="kpi" style="--k-clr:#8B5CF6">
+        <div class="kpi-lbl">Avg Monthly Cash Flow</div>
+        <div class="kpi-val" id="kpi-avg">&#8212;</div>
+        <div class="kpi-sub" id="kpi-avg-sub">Per month</div>
+      </div>
+    </div>
+
+    <!-- Trend chart -->
+    <div class="trend-card" id="trend-card">
+      <div class="chart-hdr">
+        <div class="chart-ttl">Monthly Cash Flow Trend</div>
+        <div class="chart-sub" id="trend-sub">Income vs. Expenses by month</div>
+      </div>
+      <div class="trend-wrap"><canvas id="ch-trend"></canvas></div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-hdr">
+          <div class="chart-ttl">Income vs. Expenses</div>
+          <div class="chart-sub">For selected period</div>
+        </div>
+        <div class="chart-wrap"><canvas id="ch-bar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-hdr">
+          <div class="chart-ttl">Expense Breakdown</div>
+          <div class="chart-sub">By category</div>
+        </div>
+        <div class="chart-wrap"><canvas id="ch-exp"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Cash Flow Table -->
+    <div class="pl-card">
+      <div class="pl-hdr">
+        <div class="pl-ttl">Cash Flow Statement</div>
+        <div class="pl-right">
+          <span class="pl-period-tag" id="pl-period-tag">Full Year</span>
+        </div>
+      </div>
+      <div class="pl-wrap">
+        <table class="pl">
+          <thead>
+            <tr id="cf-thead-row">
+              <th style="width:55%">Category</th>
+              <th class="r">Amount</th>
+              <th class="r">% of Income</th>
+            </tr>
+          </thead>
+          <tbody id="cf-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const PASS = 'Konfide2026!';
+function auth(){
+  if(document.getElementById('gate-in').value===PASS){
+    sessionStorage.setItem('kc_auth','1');
+    document.getElementById('gate').style.display='none';
+    document.getElementById('app').style.display='block';
+    init();
+  } else {
+    document.getElementById('gate-err').style.display='block';
+  }
+}
+
+const LLCS = {
+  prop:   {name:'Konfide Properties LLC', icon:'🏢', accent:'#10B981', properties:6, sheetUrl:''},
+  aurora: {name:'Konfide Aurora LLC',     icon:'🏠', accent:'#F59E0B', properties:3, sheetUrl:''},
+};
+
+const ITEMS = [
+  {id:'s_inc',    type:'section', label:'Income'},
+  {id:'rental',   type:'line',    label:'Rental Income',        csv:['rental income','rental']},
+  {id:'t_inc',    type:'total',   label:'Total Income'},
+  {id:'s_exp',    type:'section', label:'Expenses'},
+  {id:'mortgage', type:'line',    label:'Mortgage',             csv:['mortgage']},
+  {id:'insurance',type:'line',    label:'Insurance',            csv:['insurance']},
+  {id:'hoa',      type:'line',    label:'HOA',                  csv:['hoa']},
+  {id:'utilities',type:'line',    label:'Utilities',            csv:['utilities']},
+  {id:'repair',   type:'line',    label:'Repair & Maintenance', csv:['repair & maintenance','repair','repairs']},
+  {id:'travel',   type:'line',    label:'Travel',               csv:['travel']},
+  {id:'meals',    type:'line',    label:'Meals',                csv:['meals']},
+  {id:'office',   type:'line',    label:'Office Expenses',      csv:['office expenses','office expense']},
+  {id:'t_exp',    type:'total',   label:'Total Expenses'},
+  {id:'cashflow', type:'summary', label:'Net Cash Flow', final:true},
+];
+const EXP_IDS = ['mortgage','insurance','hoa','utilities','repair','travel','meals','office'];
+
+const YEARS       = [2025, 2026];
+const MONTHS      = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const MONTH_LABELS= ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const QMAP = {q1:['jan','feb','mar'],q2:['apr','may','jun'],q3:['jul','aug','sep'],q4:['oct','nov','dec']};
+
+// vals[itemId][year][month] = number  OR  vals[itemId][year].all = number
+let vals = {};
+let isMultiPeriod = false;
+let period  = 'yearly';
+let selYear = 2026;
+let selQ    = 'q1';
+let selM    = 'jan';
+let llc     = 'prop';
+let charts  = {};
+
+const store = {
+  prop:   {vals:{}, isMultiPeriod:false},
+  aurora: {vals:{}, isMultiPeriod:false},
+};
+
+function getYearVal(id, year){
+  const d=vals[id]; if(!d||!d[year]) return 0;
+  if(!isMultiPeriod) return d[year].all||0;
+  switch(period){
+    case 'yearly':    return MONTHS.reduce((s,m)=>s+(d[year][m]||0),0);
+    case 'quarterly': return QMAP[selQ].reduce((s,m)=>s+(d[year][m]||0),0);
+    case 'monthly':   return d[year][selM]||0;
+  }
+  return 0;
+}
+
+function getVal(id){
+  if(selYear==='all') return YEARS.reduce((s,y)=>s+getYearVal(id,y),0);
+  return getYearVal(id, selYear);
+}
+
+function getMonthlyArr(id, year){
+  const d=vals[id]; if(!d||!d[year]) return MONTHS.map(()=>0);
+  return MONTHS.map(m=>d[year][m]||0);
+}
+
+function compute(){
+  const v={};
+  v.rental=getVal('rental'); v.t_inc=v.rental;
+  EXP_IDS.forEach(id=>{v[id]=getVal(id);});
+  v.t_exp=EXP_IDS.reduce((s,id)=>s+v[id],0);
+  v.cashflow=v.t_inc-v.t_exp;
+  return v;
+}
+
+function computeForMonthYear(m, year){
+  const savedP=period,savedM=selM,savedY=selYear;
+  period='monthly'; selM=m; selYear=year;
+  const c=compute();
+  period=savedP; selM=savedM; selYear=savedY;
+  return c;
+}
+
+function money(n){
+  if(n===0) return '$0.00';
+  return (n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function pct(n,tot){ return tot?((n/tot)*100).toFixed(2)+'%':'—'; }
+
+function switchLLC(l){
+  store[llc]={vals,isMultiPeriod};
+  llc=l; vals=store[llc].vals; isMultiPeriod=store[llc].isMultiPeriod;
+  document.getElementById('llc-prop').classList.toggle('active',llc==='prop');
+  document.getElementById('llc-aurora').classList.toggle('active',llc==='aurora');
+  const cfg=LLCS[llc];
+  document.getElementById('co-h1').textContent=cfg.name;
+  document.getElementById('co-icon').textContent=cfg.icon;
+  document.getElementById('co-icon').style.background=cfg.accent+'22';
+  document.getElementById('hdr-co').textContent=cfg.name;
+  const hasCsv=Object.keys(vals).length>0;
+  document.getElementById('csv-banner').style.display=hasCsv?'flex':'none';
+  if(hasCsv) document.getElementById('csv-msg').textContent='Data loaded for '+cfg.name+'.';
+  renderPeriodUI(); renderAll();
+  if(cfg.sheetUrl&&Object.keys(vals).length===0) autoLoad(cfg.sheetUrl,cfg.name);
+}
+
+function setYear(y){ selYear=y; renderPeriodUI(); renderAll(); }
+function setPeriod(p){ period=p; renderPeriodUI(); renderAll(); }
+function setQ(q){ selQ=q; renderPeriodUI(); renderAll(); }
+function setM(m){ selM=m; renderPeriodUI(); renderAll(); }
+
+function renderPeriodUI(){
+  // Year buttons
+  document.getElementById('pm-y2025').classList.toggle('active',selYear===2025);
+  document.getElementById('pm-y2026').classList.toggle('active',selYear===2026);
+  document.getElementById('pm-yall').classList.toggle('active',selYear==='all');
+  // View buttons
+  ['yearly','quarterly','monthly'].forEach(p=>{
+    document.getElementById('pm-'+p).classList.toggle('active',period===p);
+  });
+  const subEl=document.getElementById('sub-pills');
+  const divEl=document.getElementById('sub-div');
+  let html='';
+  if(period==='monthly'){
+    html=MONTH_LABELS.map((l,i)=>{const m=MONTHS[i];return '<button class="sp'+(m===selM?' active':'')+'" onclick="setM(\''+m+'\')">'+l+'</button>';}).join('');
+    divEl.style.display='block';
+  } else if(period==='quarterly'){
+    html=['Q1','Q2','Q3','Q4'].map((l,i)=>{const q='q'+(i+1);return '<button class="sp'+(q===selQ?' active':'')+'" onclick="setQ(\''+q+'\')">'+l+'</button>';}).join('');
+    divEl.style.display='block';
+  } else { divEl.style.display='none'; }
+  subEl.innerHTML=html;
+  document.getElementById('period-hint').style.display=(!isMultiPeriod&&period!=='yearly')?'block':'none';
+  let tag=selYear==='all'?'All Years':String(selYear);
+  if(period==='quarterly') tag+=' · '+selQ.toUpperCase();
+  if(period==='monthly') tag+=' · '+MONTH_LABELS[MONTHS.indexOf(selM)];
+  document.getElementById('pl-period-tag').textContent=tag;
+}
+
+function renderAll(){ const c=compute(); renderTable(c); updateKPIs(c); updateCharts(c); }
+
+function renderTable(c){
+  const totalInc=c.t_inc;
+  const qMulti=(period==='quarterly'&&isMultiPeriod);
+  const thead=document.getElementById('cf-thead-row');
+  let monthData=null;
+  if(qMulti){
+    const qMs=QMAP[selQ];
+    const yr=selYear==='all'?2026:selYear;
+    monthData=qMs.map(m=>computeForMonthYear(m,yr));
+    thead.innerHTML='<th style="width:34%">Category</th>'+qMs.map(m=>'<th class="r">'+MONTH_LABELS[MONTHS.indexOf(m)]+'</th>').join('')+'<th class="r" style="color:rgba(100,116,139,.6);font-weight:500">Q Total</th>';
+  } else {
+    thead.innerHTML='<th style="width:55%">Category</th><th class="r">Amount</th><th class="r">% of Income</th>';
+  }
+  const body=document.getElementById('cf-body');
+  let html='';
+  ITEMS.forEach(item=>{
+    const v=c[item.id]!==undefined?c[item.id]:getVal(item.id);
+    if(qMulti&&monthData){
+      const mvs=monthData.map(md=>md[item.id]!==undefined?md[item.id]:0);
+      const qt=mvs.reduce((s,x)=>s+x,0);
+      const mc=val=>val?money(val):'';
+      const col=val=>val>=0?'var(--green)':'var(--red)';
+      switch(item.type){
+        case 'section': html+='<tr class="pl-section"><td>'+item.label+'</td><td></td><td></td><td></td><td></td></tr>'; break;
+        case 'line':    html+='<tr class="pl-line"><td style="padding-left:20px">'+item.label+'</td>'+mvs.map(x=>'<td class="r">'+mc(x)+'</td>').join('')+'<td class="r" style="opacity:.6">'+mc(qt)+'</td></tr>'; break;
+        case 'total':   html+='<tr class="pl-total"><td>'+item.label+'</td>'+mvs.map(x=>'<td class="r">'+money(x)+'</td>').join('')+'<td class="r" style="opacity:.6">'+money(qt)+'</td></tr>'; break;
+        case 'summary':
+          const cls2=qt>=0?'positive':'negative';
+          html+='<tr class="pl-summary '+cls2+(item.final?' final':'')+'"><td><strong>'+item.label+'</strong></td>'+mvs.map(x=>'<td class="r" style="color:'+col(x)+'"><strong>'+money(x)+'</strong></td>').join('')+'<td class="r" style="color:'+col(qt)+';opacity:.75"><strong>'+money(qt)+'</strong></td></tr>'; break;
+      }
+    } else {
+      const pw=totalInc>0&&v>0?Math.min((v/totalInc)*100*3,60):0;
+      const p=pct(v,totalInc);
+      const pd=v!==0?'<span class="pct-bar" style="width:'+pw+'px"></span>'+p:(item.type!=='section'&&totalInc>0?'0.00%':'');
+      switch(item.type){
+        case 'section': html+='<tr class="pl-section"><td>'+item.label+'</td><td class="r"></td><td class="pct-cell"></td></tr>'; break;
+        case 'line':    html+='<tr class="pl-line"><td style="padding-left:20px">'+item.label+'</td><td class="r">'+(v?money(v):'')+'</td><td class="pct-cell">'+(v?pd:'')+'</td></tr>'; break;
+        case 'total':   html+='<tr class="pl-total"><td>'+item.label+'</td><td class="r">'+money(v)+'</td><td class="pct-cell">'+pd+'</td></tr>'; break;
+        case 'summary':
+          const cls=v>=0?'positive':'negative';
+          html+='<tr class="pl-summary '+cls+(item.final?' final':'')+'"><td><strong>'+item.label+'</strong></td><td class="r" style="color:'+(v>=0?'var(--green)':'var(--red)')+'"><strong>'+money(v)+'</strong></td><td class="pct-cell" style="color:'+(v>=0?'var(--green)':'var(--red)')+'"><strong>'+pct(v,totalInc)+'</strong></td></tr>'; break;
+      }
+    }
+  });
+  body.innerHTML=html;
+}
+
+function updateKPIs(c){
+  const cf=c.cashflow;
+  document.getElementById('kpi-income').textContent=c.t_inc?money(c.t_inc):'—';
+  document.getElementById('kpi-exp').textContent=c.t_exp?money(c.t_exp):'—';
+  document.getElementById('kpi-cf').textContent=(c.t_inc||c.t_exp)?money(cf):'—';
+  document.getElementById('kpi-cf').style.color=cf>=0?'var(--green)':'var(--red)';
+  let months=0;
+  if(isMultiPeriod){
+    const d=vals['rental']||{};
+    const years=selYear==='all'?YEARS:[selYear];
+    years.forEach(y=>{if(d[y])MONTHS.forEach(m=>{if(d[y][m]>0)months++;});});
+  }
+  const avg=months>0?(cf/months):0;
+  document.getElementById('kpi-avg').textContent=months>0?money(avg):'—';
+  document.getElementById('kpi-avg').style.color=avg>=0?'var(--green)':'var(--red)';
+  document.getElementById('kpi-avg-sub').textContent=months>0?'Over '+months+' month'+(months>1?'s':''):'';
+}
+
+function updateCharts(c){
+  const accent=LLCS[llc].accent;
+  if(charts.bar) charts.bar.destroy();
+  charts.bar=new Chart(document.getElementById('ch-bar').getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:['Rental Income','Total Expenses','Net Cash Flow'],
+      datasets:[{data:[c.t_inc,c.t_exp,c.cashflow],backgroundColor:[accent+'CC','#EF444499',c.cashflow>=0?'#10B98199':'#EF444499'],borderRadius:6}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k',font:{size:10}}}}}
+  });
+
+  if(charts.exp) charts.exp.destroy();
+  const expLabels=['Mortgage','Insurance','HOA','Utilities','Repair','Travel','Meals','Office'];
+  const expVals=[c.mortgage,c.insurance,c.hoa,c.utilities,c.repair,c.travel,c.meals,c.office];
+  const nz=expVals.map((v,i)=>v>0?i:-1).filter(i=>i>=0);
+  const palette=['#10B981','#F59E0B','#3B82F6','#8B5CF6','#EF4444','#F97316','#06B6D4','#6366F1'];
+  charts.exp=new Chart(document.getElementById('ch-exp').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:nz.map(i=>expLabels[i]),datasets:[{data:nz.map(i=>expVals[i]),backgroundColor:nz.map(i=>palette[i]),borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10,padding:8}},
+        datalabels:{color:'#fff',font:{weight:'bold',size:9},formatter:(v,ctx)=>{const t=ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);return t?((v/t)*100).toFixed(0)+'%':'';}}
+      }},
+    plugins:[ChartDataLabels]
+  });
+
+  const trendCard=document.getElementById('trend-card');
+  if(period==='yearly'&&isMultiPeriod){
+    trendCard.style.display='block';
+    const years=selYear==='all'?YEARS:[selYear];
+    const allLabels=[],incArr=[],expArr=[],cfArr=[];
+    years.forEach(y=>{
+      MONTH_LABELS.forEach((l,i)=>{
+        allLabels.push(years.length>1?l+' '+y:l);
+        const mc=computeForMonthYear(MONTHS[i],y);
+        incArr.push(mc.rental); expArr.push(mc.t_exp); cfArr.push(mc.cashflow);
+      });
+    });
+    document.getElementById('trend-sub').textContent='Income vs. Expenses · '+(selYear==='all'?'2025–2026':String(selYear));
+    if(charts.trend) charts.trend.destroy();
+    charts.trend=new Chart(document.getElementById('ch-trend').getContext('2d'),{
+      type:'bar',
+      data:{labels:allLabels,datasets:[
+        {label:'Rental Income',data:incArr,backgroundColor:accent+'99',borderRadius:3,order:2},
+        {label:'Expenses',data:expArr,backgroundColor:'#EF444466',borderRadius:3,order:3},
+        {type:'line',label:'Net Cash Flow',data:cfArr,borderColor:'#2563EB',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.3,order:1}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:10}},datalabels:{display:false}},
+        scales:{x:{grid:{display:false},ticks:{font:{size:9},maxRotation:allLabels.length>12?45:0}},
+          y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k',font:{size:10}}}}}
+    });
+  } else {
+    trendCard.style.display='none';
+    if(charts.trend){charts.trend.destroy();charts.trend=null;}
+  }
+}
+
+function loadCSV(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{ applyData(parseCSV(ev.target.result), file.name); };
+  reader.readAsText(file); e.target.value='';
+}
+
+function applyData(result, source){
+  const count=Object.keys(result.vals).length;
+  if(!count){alert('No matching line items found. Download the CSV Template to see the expected format.');return;}
+  vals=result.vals; isMultiPeriod=result.isMulti;
+  store[llc]={vals,isMultiPeriod};
+  if(!isMultiPeriod) period='yearly';
+  // Select most recent year that has data
+  const avail=YEARS.filter(y=>Object.values(vals).some(d=>d[y]));
+  if(avail.length) selYear=avail[avail.length-1];
+  document.getElementById('csv-msg').innerHTML='<strong>'+count+' line items</strong> loaded from <strong>'+source+'</strong>.';
+  document.getElementById('csv-banner').style.display='flex';
+  renderPeriodUI(); renderAll();
+}
+
+function resetData(){
+  vals={}; isMultiPeriod=false; store[llc]={vals:{},isMultiPeriod:false};
+  period='yearly'; selYear=2026;
+  document.getElementById('csv-banner').style.display='none';
+  renderPeriodUI(); renderAll();
+}
+
+async function autoLoad(url,name){
+  try{
+    const resp=await fetch(url);
+    applyData(parseCSV(await resp.text()), name+' (Google Sheets)');
+  }catch(e){console.warn('Auto-load failed:',e);}
+}
+
+// CSV parser — supports "Jan 2025" / "Jan" column headers
+const M_NAMES={
+  jan:0,january:0,feb:1,february:1,mar:2,march:2,apr:3,april:3,
+  may:4,jun:5,june:5,jul:6,july:6,aug:7,august:7,
+  sep:8,september:8,oct:9,october:9,nov:10,november:10,dec:11,december:11
+};
+function parseLine(line){
+  const cols=[]; let cur='',inQ=false;
+  for(const c of line){
+    if(c==='"') inQ=!inQ;
+    else if(c===','&&!inQ){cols.push(cur);cur='';}
+    else cur+=c;
+  }
+  cols.push(cur); return cols;
+}
+function parseCSV(text){
+  const lines=text.split(/\r?\n/);
+  let colMap=null;
+  for(let i=0;i<Math.min(10,lines.length);i++){
+    const cols=parseLine(lines[i]);
+    const map={};let cnt=0;
+    cols.forEach((c,idx)=>{
+      const raw=c.replace(/^"|"$/g,'').trim();
+      const yMatch=raw.match(/(\d{4})$/);
+      const yr=yMatch?parseInt(yMatch[1]):null;
+      const stripped=raw.replace(/\s*\d{4}$/,'').trim().toLowerCase();
+      if(M_NAMES[stripped]!==undefined){map[idx]={year:yr,month:MONTHS[M_NAMES[stripped]]};cnt++;}
+    });
+    if(cnt>=6){colMap=map;break;}
+  }
+  const isMulti=colMap!==null;
+  const defaultYear=2026;
+  const result={};
+  lines.forEach(line=>{
+    const cols=parseLine(line);
+    if(cols.length<2) return;
+    const label=cols[0].replace(/^"|"$/g,'').trim().toLowerCase();
+    if(!label) return;
+    ITEMS.forEach(item=>{
+      if(!item.csv||!item.csv.some(k=>k===label)) return;
+      if(isMulti&&colMap){
+        const d={};
+        Object.entries(colMap).forEach(([idx,{year,month}])=>{
+          const yr=year||defaultYear;
+          const raw=(cols[idx]||'').replace(/^"|"$/g,'').replace(/[$,%() ]/g,'').replace(/,/g,'').trim();
+          const n=parseFloat(raw);
+          if(!isNaN(n)){if(!d[yr])d[yr]={};d[yr][month]=(d[yr][month]||0)+Math.abs(n);}
+        });
+        if(Object.keys(d).length) result[item.id]=d;
+      } else {
+        let amount=0;
+        for(let i=1;i<cols.length;i++){
+          const raw=cols[i].replace(/^"|"$/g,'').replace(/[$,%()]/g,'').replace(/,/g,'').trim();
+          const n=parseFloat(raw);
+          if(!isNaN(n)&&n!==0){amount=Math.abs(n);break;}
+        }
+        if(amount) result[item.id]={[defaultYear]:{all:amount}};
+      }
+    });
+  });
+  return {vals:result,isMulti};
+}
+
+function dlTemplate(){
+  const headers=['Label'];
+  YEARS.forEach(y=>MONTH_LABELS.forEach(m=>headers.push(m+' '+y)));
+  const rows=[headers.join(',')];
+  ITEMS.filter(i=>i.csv).forEach(item=>{
+    rows.push([item.label,...YEARS.flatMap(()=>MONTHS.map(()=>'0'))].join(','));
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.download='konfide_properties_template.csv'; a.click();
+}
+
+async function init(){
+  const cfg=LLCS[llc];
+  document.getElementById('co-h1').textContent=cfg.name;
+  document.getElementById('co-icon').textContent=cfg.icon;
+  document.getElementById('co-icon').style.background=cfg.accent+'22';
+  document.getElementById('hdr-co').textContent=cfg.name;
+  selYear=2026; setPeriod('yearly');
+  renderPeriodUI(); renderAll();
+  if(cfg.sheetUrl) await autoLoad(cfg.sheetUrl,cfg.name);
+}
+
+if(sessionStorage.getItem('kc_auth')==='1') init();
+</script>
+</body>
+</html>
