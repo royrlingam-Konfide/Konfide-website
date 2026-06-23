@@ -319,9 +319,12 @@ if(sessionStorage.getItem('kc_auth')==='1'){
 
 // ── Company config ──
 const COS = {
-  kirk:   {name:'Smart Beginnings Kirk & Butterfield', icon:'🏫', accent:'#3B82F6'},
-  ogden:  {name:'Smart Beginnings Ogden & IL 59',     icon:'🏫', accent:'#8B5CF6'},
-  oswego: {name:'Smart Beginnings Oswego',            icon:'🏫', accent:'#14B8A6'},
+  kirk:   {name:'Smart Beginnings Kirk & Butterfield', icon:'🏫', accent:'#3B82F6',
+           sheetUrl:'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9pc5vFHL2MDxKjmRmlD8kWFN4o-OydFBwugbtEef4RanCdbSYHlYweW8utxmFKnZJRRZtXFSMj-N1/pub?gid=635153044&single=true&output=csv'},
+  ogden:  {name:'Smart Beginnings Ogden & IL 59',     icon:'🏫', accent:'#8B5CF6',
+           sheetUrl:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4e1w-OUrSgC30CAxSwJhCaI5-3bF8ltghX-Lny6tDal1DVGcoT99BeevWqJtvgocjYOdFcnscPrTy/pub?gid=1088142602&single=true&output=csv'},
+  oswego: {name:'Smart Beginnings Oswego',            icon:'🏫', accent:'#14B8A6',
+           sheetUrl:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQd4pfJrDmZpBYfiCmnWr5k2KBC8XQplyL3rQTt8IT6-3m4zvelqj7WZRUfZwVOU4F8ftuxH6Z9X0LA/pub?gid=1284296860&single=true&output=csv'},
 };
 
 // ── Period state ──
@@ -975,7 +978,7 @@ function dlTemplate(){
 }
 
 // ── Init ──
-function init(){
+async function init(){
   const p=new URLSearchParams(window.location.search);
   co=p.get('co')||'kirk';
   if(!COS[co]) co='kirk';
@@ -987,6 +990,26 @@ function init(){
   document.getElementById('co-h1').textContent=cfg.name;
   renderPeriodUI();
   renderAll();
+
+  // Auto-load from Google Sheet
+  if(cfg.sheetUrl){
+    try{
+      const resp = await fetch(cfg.sheetUrl);
+      const text = await resp.text();
+      const result = parseCSV(text);
+      const count = Object.keys(result.vals).length;
+      if(count>0){
+        vals=result.vals;
+        isMultiPeriod=result.isMulti;
+        document.getElementById('csv-msg').innerHTML=`<strong>${count} line items</strong> loaded automatically from Google Sheets.`;
+        document.getElementById('csv-banner').style.display='flex';
+        renderPeriodUI();
+        renderAll();
+      }
+    }catch(e){
+      console.warn('Could not auto-load sheet:',e);
+    }
+  }
 }
 
 if(sessionStorage.getItem('kc_auth')==='1') init();
