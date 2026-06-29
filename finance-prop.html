@@ -184,6 +184,11 @@ tr.pl-summary.final td{font-size:.92rem;border-top:3px double var(--border);}
         Konfide Aurora LLC
         <span style="font-size:.65rem;color:var(--text-3);margin-left:4px;">3 properties</span>
       </button>
+      <button class="llc-btn" id="llc-combined" onclick="switchLLC('combined')">
+        <span class="llc-dot" style="background:#6366F1"></span>
+        Combined View
+        <span style="font-size:.65rem;opacity:.5;margin-left:4px;">all 9 properties</span>
+      </button>
     </div>
 
     <div class="csv-banner" id="csv-banner">
@@ -300,8 +305,9 @@ function auth(){
 }
 
 const LLCS = {
-  prop:   {name:'Konfide Properties LLC', icon:'🏢', accent:'#10B981', properties:6, sheetUrl:''},
-  aurora: {name:'Konfide Aurora LLC',     icon:'🏠', accent:'#F59E0B', properties:3, sheetUrl:''},
+  prop:     {name:'Konfide Properties LLC',      icon:'🏢', accent:'#10B981', properties:6, sheetUrl:''},
+  aurora:   {name:'Konfide Aurora LLC',          icon:'🏠', accent:'#F59E0B', properties:3, sheetUrl:''},
+  combined: {name:'Combined — All Properties',  icon:'🏘', accent:'#6366F1', properties:9, sheetUrl:''},
 };
 
 const ITEMS = [
@@ -342,7 +348,19 @@ const store = {
   aurora: {vals:{}, isMultiPeriod:false},
 };
 
+function storeYearVal(sk, id, year){
+  const s=store[sk]; const d=(s.vals[id]||{})[year]; if(!d) return 0;
+  if(!s.isMultiPeriod) return d.all||0;
+  switch(period){
+    case 'yearly':    return MONTHS.reduce((sum,m)=>sum+(d[m]||0),0);
+    case 'quarterly': return QMAP[selQ].reduce((sum,m)=>sum+(d[m]||0),0);
+    case 'monthly':   return d[selM]||0;
+  }
+  return 0;
+}
+
 function getYearVal(id, year){
+  if(llc==='combined') return storeYearVal('prop',id,year)+storeYearVal('aurora',id,year);
   const d=vals[id]; if(!d||!d[year]) return 0;
   if(!isMultiPeriod) return d[year].all||0;
   switch(period){
@@ -387,20 +405,30 @@ function money(n){
 function pct(n,tot){ return tot?((n/tot)*100).toFixed(2)+'%':'—'; }
 
 function switchLLC(l){
-  store[llc]={vals,isMultiPeriod};
-  llc=l; vals=store[llc].vals; isMultiPeriod=store[llc].isMultiPeriod;
-  document.getElementById('llc-prop').classList.toggle('active',llc==='prop');
-  document.getElementById('llc-aurora').classList.toggle('active',llc==='aurora');
+  if(llc!=='combined') store[llc]={vals,isMultiPeriod};
+  llc=l;
+  if(llc==='combined'){
+    isMultiPeriod=store.prop.isMultiPeriod||store.aurora.isMultiPeriod;
+    vals={};
+  } else {
+    vals=store[llc].vals; isMultiPeriod=store[llc].isMultiPeriod;
+  }
+  ['prop','aurora','combined'].forEach(k=>
+    document.getElementById('llc-'+k).classList.toggle('active',llc===k)
+  );
   const cfg=LLCS[llc];
   document.getElementById('co-h1').textContent=cfg.name;
   document.getElementById('co-icon').textContent=cfg.icon;
   document.getElementById('co-icon').style.background=cfg.accent+'22';
   document.getElementById('hdr-co').textContent=cfg.name;
-  const hasCsv=Object.keys(vals).length>0;
+  // hide upload controls in combined mode
+  document.querySelector('.upload-lbl').style.display=llc==='combined'?'none':'inline-flex';
+  document.querySelector('.tpl-btn').style.display=llc==='combined'?'none':'inline-flex';
+  const hasCsv=llc!=='combined'&&Object.keys(vals).length>0;
   document.getElementById('csv-banner').style.display=hasCsv?'flex':'none';
   if(hasCsv) document.getElementById('csv-msg').textContent='Data loaded for '+cfg.name+'.';
   renderPeriodUI(); renderAll();
-  if(cfg.sheetUrl&&Object.keys(vals).length===0) autoLoad(cfg.sheetUrl,cfg.name);
+  if(llc!=='combined'&&cfg.sheetUrl&&Object.keys(vals).length===0) autoLoad(cfg.sheetUrl,cfg.name);
 }
 
 function setYear(y){ selYear=y; renderPeriodUI(); renderAll(); }
@@ -491,7 +519,16 @@ function updateKPIs(c){
   document.getElementById('kpi-cf').textContent=(c.t_inc||c.t_exp)?money(cf):'—';
   document.getElementById('kpi-cf').style.color=cf>=0?'var(--green)':'var(--red)';
   let months=0;
-  if(isMultiPeriod){
+  if(llc==='combined'){
+    const years=selYear==='all'?YEARS:[selYear];
+    const seen=new Set();
+    ['prop','aurora'].forEach(sk=>{
+      const s=store[sk]; if(!s.isMultiPeriod) return;
+      const d=(s.vals['rental']||{});
+      years.forEach(y=>{if(d[y])MONTHS.forEach(m=>{if(d[y][m]>0)seen.add(y+'-'+m);});});
+    });
+    months=seen.size;
+  } else if(isMultiPeriod){
     const d=vals['rental']||{};
     const years=selYear==='all'?YEARS:[selYear];
     years.forEach(y=>{if(d[y])MONTHS.forEach(m=>{if(d[y][m]>0)months++;});});
