@@ -168,7 +168,7 @@ tr.pl-summary.final td{font-size:.92rem;border-top:3px double var(--border);}
     <div class="hdr-div"></div>
     <div class="hdr-co" id="hdr-co">Konfide Properties</div>
     <div class="hdr-actions">
-      <button class="print-btn" onclick="window.print()">🖨 Print P&amp;L</button>
+      <button class="print-btn" onclick="printPL()">🖨 Print P&amp;L</button>
       <button class="tpl-btn" onclick="dlTemplate()">&#8595; CSV Template</button>
       <label class="upload-lbl" for="file-in">&#8593; Upload CSV</label>
       <input type="file" id="file-in" accept=".csv" onchange="loadCSV(event)">
@@ -715,6 +715,40 @@ function parseCSV(text){
     });
   });
   return {vals:result,isMulti};
+}
+
+function printPL(){
+  const table = document.querySelector('table.pl');
+  if(!table) return;
+  const co   = document.getElementById('hdr-co').textContent;
+  const date = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const clone = table.cloneNode(true);
+  clone.querySelectorAll('.toggle-btn,.pct-bar,.pct-cell').forEach(el=>el.remove());
+  const win = window.open('','_blank','width=1000,height=700');
+  win.document.write(`<!DOCTYPE html><html><head>
+<title>${co} P&L</title>
+<style>
+@page{size:A4 landscape;margin:1.2cm 1.5cm;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;font-size:8.5pt;color:#0F172A;}
+.pt{font-size:13pt;font-weight:700;margin-bottom:3px;}
+.ps{font-size:8pt;color:#64748B;margin-bottom:12px;}
+table{width:100%;border-collapse:collapse;}
+th{padding:5px 10px;text-align:left;font-size:7pt;letter-spacing:.08em;text-transform:uppercase;color:#64748B;font-weight:600;background:#F8FAFC;border-bottom:1.5px solid #CBD5E1;white-space:nowrap;}
+th.r{text-align:right;}
+td{padding:3px 10px;border-bottom:1px solid #F1F4F9;font-size:8pt;white-space:nowrap;}
+td.r{text-align:right;font-variant-numeric:tabular-nums;}
+tr.pl-section td{background:#1E293B;color:#fff;font-size:7pt;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:5px 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+tr:nth-child(even):not(.pl-section) td{background:#FAFBFC;}
+</style>
+</head><body>
+<div class="pt">${co} — Profit &amp; Loss Statement</div>
+<div class="ps">Printed ${date}</div>
+${clone.outerHTML}
+</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>win.print(), 400);
 }
 
 function dlTemplate(){
