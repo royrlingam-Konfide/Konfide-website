@@ -248,14 +248,15 @@
 
     // Credentials — change as needed
     const VALID = [
-      { username: 'Roy',  password: 'Konfide2026!' },
+      { username: 'Roy',    password: 'Konfide2026!',  redirect: 'finance.html' },
+      { username: 'LAdams', password: 'LAdams2026$!',  redirect: 'finance-sb.html?co=oswego' },
     ];
 
-    const ok = VALID.some(c => c.username === user && c.password === pass);
+    const match = VALID.find(c => c.username === user && c.password === pass);
 
-    if (ok) {
+    if (match) {
       sessionStorage.setItem('kc_auth', '1');
-      window.location.href = 'finance.html';
+      window.location.href = match.redirect;
     } else {
       err.classList.add('show');
       document.getElementById('password').value = '';
