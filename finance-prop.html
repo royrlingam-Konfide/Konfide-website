@@ -130,6 +130,21 @@ tr.pl-summary.final td{font-size:.92rem;border-top:3px double var(--border);}
   .period-bar{gap:10px;}
   .llc-bar{flex-wrap:wrap;}
 }
+
+.print-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(191,155,80,.1);border:1px solid rgba(191,155,80,.25);color:#BF9B50;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;padding:7px 16px;cursor:pointer;transition:background .2s;white-space:nowrap;}
+.print-btn:hover{background:rgba(191,155,80,.2);}
+
+@media print {
+  .hdr, .kpi-row, .charts-row, .period-bar, .llc-bar, .print-btn,
+  .tpl-btn, .upload-lbl, #file-in, .expand-all-btn { display:none !important; }
+  body { background:#fff !important; color:#000 !important; }
+  .page { padding:0 !important; max-width:100% !important; }
+  .card { box-shadow:none !important; border:1px solid #ddd !important; break-inside:avoid; }
+  .print-header { display:block !important; }
+}
+.print-header { display:none; padding:0 0 18px; }
+.print-header h2 { font-size:1.1rem; font-weight:600; color:#0F172A; }
+.print-header p { font-size:.78rem; color:#64748B; margin-top:4px; }
 </style>
 </head>
 <body>
@@ -153,6 +168,7 @@ tr.pl-summary.final td{font-size:.92rem;border-top:3px double var(--border);}
     <div class="hdr-div"></div>
     <div class="hdr-co" id="hdr-co">Konfide Properties</div>
     <div class="hdr-actions">
+      <button class="print-btn" onclick="window.print()">🖨 Print P&amp;L</button>
       <button class="tpl-btn" onclick="dlTemplate()">&#8595; CSV Template</button>
       <label class="upload-lbl" for="file-in">&#8593; Upload CSV</label>
       <input type="file" id="file-in" accept=".csv" onchange="loadCSV(event)">
@@ -273,6 +289,10 @@ tr.pl-summary.final td{font-size:.92rem;border-top:3px double var(--border);}
         <div class="pl-right">
           <span class="pl-period-tag" id="pl-period-tag">Full Year</span>
         </div>
+      </div>
+      <div class="print-header">
+        <h2 id="print-title">P&amp;L Statement</h2>
+        <p id="print-date"></p>
       </div>
       <div class="pl-wrap">
         <table class="pl">
@@ -715,6 +735,8 @@ async function init(){
   document.getElementById('co-icon').textContent=cfg.icon;
   document.getElementById('co-icon').style.background=cfg.accent+'22';
   document.getElementById('hdr-co').textContent=cfg.name;
+  document.getElementById('print-title').textContent=cfg.name+' — P&L Statement';
+  document.getElementById('print-date').textContent='Printed '+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
   selYear=2026; setPeriod('yearly');
   renderPeriodUI(); renderAll();
   if(cfg.sheetUrl) await autoLoad(cfg.sheetUrl,cfg.name);

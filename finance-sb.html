@@ -137,6 +137,23 @@ tr.pl-summary.final td{font-size:.92rem;border-top:3px double var(--border);}
 code{background:#F1F4F9;border:1px solid var(--border);padding:1px 6px;border-radius:4px;font-size:.73rem;font-family:'JetBrains Mono',monospace;color:#E11D48;}
 
 @media(max-width:1024px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
+
+.print-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(191,155,80,.1);border:1px solid rgba(191,155,80,.25);color:#BF9B50;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;padding:7px 16px;cursor:pointer;transition:background .2s;white-space:nowrap;}
+.print-btn:hover{background:rgba(191,155,80,.2);}
+
+@media print {
+  .hdr, .kpi-row, .charts-row, .period-bar, .print-btn,
+  .tpl-btn, .upload-lbl, #file-in, .expand-all-btn,
+  .fmt, .no-data { display:none !important; }
+  body { background:#fff !important; color:#000 !important; }
+  .page { padding:0 !important; max-width:100% !important; }
+  .card { box-shadow:none !important; border:1px solid #ddd !important; break-inside:avoid; }
+  .pl-section td { background:#1a1a1a !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .print-header { display:block !important; }
+}
+.print-header { display:none; padding:0 0 18px; }
+.print-header h2 { font-size:1.1rem; font-weight:600; color:#0F172A; }
+.print-header p { font-size:.78rem; color:#64748B; margin-top:4px; }
 @media(max-width:768px){
   .hdr{padding:0 16px;}.page{padding:20px 16px;}
   .kpi-row{grid-template-columns:1fr 1fr;}
@@ -166,6 +183,7 @@ code{background:#F1F4F9;border:1px solid var(--border);padding:1px 6px;border-ra
     <div class="hdr-div"></div>
     <div class="hdr-co" id="hdr-co"></div>
     <div class="hdr-actions">
+      <button class="print-btn" onclick="window.print()">🖨 Print P&amp;L</button>
       <button class="tpl-btn" onclick="dlTemplate()">⬇ CSV Template</button>
       <label class="upload-lbl" for="file-in">↑ Upload CSV</label>
       <input type="file" id="file-in" accept=".csv" onchange="loadCSV(event)">
@@ -269,6 +287,10 @@ code{background:#F1F4F9;border:1px solid var(--border);padding:1px 6px;border-ra
           <button class="expand-all-btn" onclick="expandAll()">Expand All</button>
           <button class="expand-all-btn" onclick="collapseAll()" style="color:var(--text-3);">Collapse All</button>
         </div>
+      </div>
+      <div class="print-header">
+        <h2 id="print-title">P&amp;L Statement</h2>
+        <p id="print-date"></p>
       </div>
       <div class="pl-wrap">
         <table class="pl">
@@ -985,6 +1007,8 @@ async function init(){
   const cfg=COS[co];
   document.title=cfg.name+' P&L — Konfide Capital';
   document.getElementById('hdr-co').textContent=cfg.name;
+  document.getElementById('print-title').textContent=cfg.name+' — P&L Statement';
+  document.getElementById('print-date').textContent='Printed '+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
   document.getElementById('co-icon').textContent=cfg.icon;
   document.getElementById('co-icon').style.background=cfg.accent+'22';
   document.getElementById('co-h1').textContent=cfg.name;
