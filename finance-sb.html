@@ -499,6 +499,13 @@ function getMonthlyArr(id){
   return MONTHS.map(m => d[m]||0);
 }
 
+// Months that actually have data — so a partial-year upload (e.g. Jan–Jul)
+// doesn't render five empty trailing columns.
+function getPopulatedMonths(){
+  const lineIds = ITEMS.filter(i=>i.type==='line').map(i=>i.id);
+  return MONTHS.filter(m => lineIds.some(id => vals[id] && vals[id][m]));
+}
+
 // ── Compute ──
 function sum(ids){ return ids.reduce((s,id) => s+getVal(id), 0); }
 
@@ -621,21 +628,25 @@ function computeForMonth(m){
 function renderTable(c){
   const totalInc = c.t_inc;
   const qMulti = (period==='quarterly' && isMultiPeriod);
+  const yMulti = (period==='yearly' && isMultiPeriod);
+  const multiMonths = qMulti ? QMAP[selQ] : (yMulti ? getPopulatedMonths() : null);
+  const isMulti = !!multiMonths;
+  const totalLabel = qMulti ? 'Q Total' : 'YTD Total';
 
   // Update table header
   const theadRow = document.getElementById('pl-thead-row');
-  if(qMulti){
-    const qMs = QMAP[selQ];
-    const labels = qMs.map(m => MONTH_LABELS[MONTHS.indexOf(m)]);
-    theadRow.innerHTML = `<th style="width:34%">Category</th>`
+  if(isMulti){
+    const labels = multiMonths.map(m => MONTH_LABELS[MONTHS.indexOf(m)]);
+    const catWidth = Math.max(18, 34 - (labels.length-3)*2);
+    theadRow.innerHTML = `<th style="width:${catWidth}%">Category</th>`
       + labels.map(l=>`<th class="r">${l}</th>`).join('')
-      + `<th class="r" style="color:rgba(255,255,255,.45);font-weight:500">Q Total</th>`;
+      + `<th class="r" style="color:rgba(255,255,255,.45);font-weight:500">${totalLabel}</th>`;
   } else {
     theadRow.innerHTML = `<th style="width:55%">Category</th><th class="r">Total</th><th class="r">% of Income</th>`;
   }
 
-  // Per-month computed data for quarterly multi-column view
-  const monthData = qMulti ? QMAP[selQ].map(m => computeForMonth(m)) : null;
+  // Per-month computed data for quarterly/yearly multi-column view
+  const monthData = isMulti ? multiMonths.map(m => computeForMonth(m)) : null;
 
   const body = document.getElementById('pl-body');
   let html = '';
@@ -648,8 +659,8 @@ function renderTable(c){
     const isExp = expanded.has(item.id);
     const icon = item.type==='category' ? `<span class="expand-icon">${isExp?'▾':'▸'}</span>` : '';
 
-    if(qMulti){
-      // Quarterly multi-column: one column per month + Q total
+    if(isMulti){
+      // Quarterly/Yearly multi-column: one column per month + total
       const mvs = monthData.map(md => md[item.id] !== undefined ? md[item.id] : 0);
       const qtotal = mvs.reduce((s,x)=>s+x,0);
       const mc = (val) => val ? money(val) : '';
