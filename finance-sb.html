@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#F1F4F9;--surface:#fff;--border:#E2E8F0;
@@ -184,6 +185,7 @@ code{background:#F1F4F9;border:1px solid var(--border);padding:1px 6px;border-ra
     <div class="hdr-co" id="hdr-co"></div>
     <div class="hdr-actions">
       <button class="print-btn" onclick="printPL()">🖨 Print P&amp;L</button>
+      <button class="print-btn" onclick="exportExcel()">⬇ Download Excel</button>
       <button class="tpl-btn" onclick="dlTemplate()">⬇ CSV Template</button>
       <label class="upload-lbl" for="file-in">↑ Upload CSV</label>
       <input type="file" id="file-in" accept=".csv" onchange="loadCSV(event)">
@@ -1046,6 +1048,68 @@ function dlTemplate(){
   a.href=URL.createObjectURL(blob);
   a.download=`${co}_pl_monthly_template.csv`;
   a.click();
+}
+
+// ── Download Excel (.xlsx) ──
+// Mirrors whatever period view is currently active (single Total/%,
+// Quarterly 3-month, or Yearly per-populated-month), but always includes
+// every row (ignores expand/collapse state) and writes real numbers,
+// not formatted strings, so the sheet is usable for math in Excel.
+function exportExcel(){
+  const qMulti = (period==='quarterly' && isMultiPeriod);
+  const yMulti = (period==='yearly' && isMultiPeriod);
+  const multiMonths = qMulti ? QMAP[selQ] : (yMulti ? getPopulatedMonths() : null);
+  const isMulti = !!multiMonths;
+  const totalLabel = qMulti ? 'Q Total' : 'YTD Total';
+
+  const monthData = isMulti ? multiMonths.map(m => computeForMonth(m)) : null;
+  const c = compute();
+  const totalInc = c.t_inc;
+
+  const aoa = [];
+  aoa.push([`${COS[co].name} — Profit & Loss Statement`]);
+  aoa.push([`Generated ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}`]);
+  aoa.push([]);
+
+  if(isMulti){
+    aoa.push(['Category', ...multiMonths.map(m=>MONTH_LABELS[MONTHS.indexOf(m)]), totalLabel]);
+  } else {
+    aoa.push(['Category', 'Total', '% of Income']);
+  }
+
+  ITEMS.forEach(item=>{
+    const ind = '    '.repeat(item.level);
+    const label = ind + item.label;
+
+    if(isMulti){
+      const mvs = monthData.map(md => md[item.id] !== undefined ? md[item.id] : 0);
+      const rowTotal = mvs.reduce((s,x)=>s+x,0);
+      if(item.type==='section'){ aoa.push([item.label]); return; }
+      aoa.push([label, ...mvs, rowTotal]);
+    } else {
+      const v = c[item.id] !== undefined ? c[item.id] : getVal(item.id);
+      if(item.type==='section'){ aoa.push([item.label]); return; }
+      aoa.push([label, v, totalInc ? v/totalInc : 0]);
+    }
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const numCols = isMulti ? multiMonths.length+2 : 3;
+  ws['!cols'] = [{wch:38}, ...Array(numCols-1).fill({wch:14})];
+  if(!isMulti){
+    // Format the % of Income column as a percentage
+    for(let r=4;r<aoa.length;r++){
+      const ref = XLSX.utils.encode_cell({r, c:2});
+      if(ws[ref]) ws[ref].z = '0.00%';
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'P&L');
+
+  const periodSlug = period==='yearly' ? 'yearly' : period==='quarterly' ? selQ : selM;
+  const dateStr = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `${co}_pl_${periodSlug}_${dateStr}.xlsx`);
 }
 
 // ── Init ──
