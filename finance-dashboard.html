@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
   :root {
     --bg:#F1F4F9; --surface:#FFFFFF; --border:#E2E8F0;
@@ -167,6 +168,7 @@
     <div class="header-divider"></div>
     <div class="header-co" id="header-co-name">Dashboard</div>
     <div class="header-actions">
+      <button class="template-btn" onclick="exportExcel()">⬇ Download Excel</button>
       <button class="template-btn" onclick="downloadTemplate()">⬇ CSV Template</button>
       <label class="upload-btn" for="csv-file-input">
         ↑ Upload CSV
@@ -732,6 +734,129 @@ function downloadTemplate() {
   a.href = URL.createObjectURL(blob);
   a.download = `${co}_template_2025.csv`;
   a.click();
+}
+
+// ── Download Excel (.xlsx) — styled to match the print/PDF P&L ──
+function exportExcel() {
+  const cfg = COMPANIES[co];
+  const d = filteredData;
+  const periodLabel = currentPeriod === 'all' ? 'All 2025' : currentPeriod.toUpperCase() + ' 2025';
+
+  const rev  = d.reduce((s,r) => s+r.revenue, 0);
+  const cogs = d.reduce((s,r) => s+r.cogs, 0);
+  const gp   = d.reduce((s,r) => s+r.grossProfit, 0);
+  const opex = d.reduce((s,r) => s+r.operatingExpenses, 0);
+  const ni   = d.reduce((s,r) => s+r.netIncome, 0);
+  const gm   = rev ? gp/rev : 0;
+  const nm   = rev ? ni/rev : 0;
+
+  const TEXT='0F172A', TEXT2='475569', WHITE='FFFFFF';
+  const BORDER2='94A3B8';
+  const SECTION_BG='0F172A', TOTAL_BG='EEF0F5', HEADER_BG='F8FAFC';
+  const POS_BG='ECFDF5', NEG_BG='FEF2F2', GREEN='059669', RED='DC2626';
+  const moneyFmt = '$#,##0.00;[Red]-$#,##0.00';
+  const pctFmt = '0.0%';
+  const thin = {style:'thin', color:{rgb:'CBD5E1'}};
+  const medium = {style:'medium', color:{rgb:BORDER2}};
+  const double = {style:'double', color:{rgb:BORDER2}};
+
+  const numCols = 8; // Month, Revenue, COGS, Gross Profit, GP Margin, Op Expenses, Net Income, Net Margin
+  const aoa = [];
+  const rowMeta = [];
+
+  aoa.push([`${cfg.name} — Financial Summary`, ...Array(numCols-1).fill('')]);
+  rowMeta.push({kind:'title'});
+  aoa.push([`Generated ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} — ${periodLabel}`, ...Array(numCols-1).fill('')]);
+  rowMeta.push({kind:'subtitle'});
+  aoa.push([]);
+  rowMeta.push({kind:'blank'});
+
+  // ── KPI summary block ──
+  aoa.push(['KEY METRICS', ...Array(numCols-1).fill('')]);
+  rowMeta.push({kind:'section'});
+  [
+    ['Revenue', rev, 'money', null],
+    ['COGS', cogs, 'money', null],
+    ['Gross Profit', gp, 'money', null],
+    ['Gross Margin', gm, 'pct', null],
+    ['Operating Expenses', opex, 'money', null],
+    ['Net Income', ni, 'money', 'summary'],
+  ].forEach(([label, val, fmtType, kind]) => {
+    aoa.push([label, val, ...Array(numCols-2).fill('')]);
+    rowMeta.push({kind: kind||'line', fmt: fmtType, positive: val>=0, final: kind==='summary'});
+  });
+  aoa.push([]);
+  rowMeta.push({kind:'blank'});
+
+  // ── Monthly table ──
+  aoa.push(['MONTHLY DETAIL', ...Array(numCols-1).fill('')]);
+  rowMeta.push({kind:'section'});
+  aoa.push(['Month','Revenue','COGS','Gross Profit','GP Margin','Op Expenses','Net Income','Net Margin']);
+  rowMeta.push({kind:'header'});
+  d.forEach(r=>{
+    aoa.push([r.month, r.revenue, r.cogs, r.grossProfit, r.grossMarginPct/100, r.operatingExpenses, r.netIncome, r.netMarginPct/100]);
+    rowMeta.push({kind:'monthrow'});
+  });
+  aoa.push(['TOTAL', rev, cogs, gp, gm, opex, ni, nm]);
+  rowMeta.push({kind:'total'});
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:22},{wch:14},{wch:14},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12}];
+
+  function ref(r,cIdx){ return XLSX.utils.encode_cell({r, c:cIdx}); }
+  function ensure(r,cIdx){
+    const k = ref(r,cIdx);
+    if(!ws[k]) ws[k] = {t:'s', v:''};
+    return k;
+  }
+  function styleRow(r, style, cols){
+    const n = cols || numCols;
+    for(let cIdx=0; cIdx<n; cIdx++){
+      const k = ensure(r,cIdx);
+      ws[k].s = Object.assign({}, ws[k].s, style);
+    }
+  }
+
+  rowMeta.forEach((meta, r) => {
+    if(meta.kind==='title'){
+      styleRow(r, {font:{bold:true, sz:14, color:{rgb:TEXT}}});
+    } else if(meta.kind==='subtitle'){
+      styleRow(r, {font:{italic:true, sz:10, color:{rgb:TEXT2}}});
+    } else if(meta.kind==='section'){
+      styleRow(r, {font:{bold:true, sz:10, color:{rgb:WHITE}}, fill:{patternType:'solid', fgColor:{rgb:SECTION_BG}}});
+    } else if(meta.kind==='header'){
+      styleRow(r, {font:{bold:true, sz:10, color:{rgb:TEXT2}}, fill:{patternType:'solid', fgColor:{rgb:HEADER_BG}}, border:{bottom:medium}});
+    } else if(meta.kind==='line'){
+      styleRow(r, {font:{sz:10, color:{rgb:TEXT2}}}, 2);
+      const k = ref(r,1);
+      if(ws[k]) ws[k].z = meta.fmt==='pct' ? pctFmt : moneyFmt;
+    } else if(meta.kind==='summary'){
+      const bg = meta.positive ? POS_BG : NEG_BG;
+      const fc = meta.positive ? GREEN : RED;
+      styleRow(r, {font:{bold:true, sz:12, color:{rgb:fc}}, fill:{patternType:'solid', fgColor:{rgb:bg}}, border:{top:double}}, 2);
+      const k = ref(r,1);
+      if(ws[k]) ws[k].z = moneyFmt;
+    } else if(meta.kind==='monthrow'){
+      styleRow(r, {font:{sz:10, color:{rgb:TEXT2}}});
+      [1,2,3,5,6].forEach(cIdx=>{ const k=ref(r,cIdx); if(ws[k]) ws[k].z = moneyFmt; });
+      [4,7].forEach(cIdx=>{ const k=ref(r,cIdx); if(ws[k]) ws[k].z = pctFmt; });
+    } else if(meta.kind==='total'){
+      styleRow(r, {font:{bold:true, sz:10, color:{rgb:TEXT}}, fill:{patternType:'solid', fgColor:{rgb:TOTAL_BG}}, border:{top:medium, bottom:medium}});
+      [1,2,3,5,6].forEach(cIdx=>{ const k=ref(r,cIdx); if(ws[k]) ws[k].z = moneyFmt; });
+      [4,7].forEach(cIdx=>{ const k=ref(r,cIdx); if(ws[k]) ws[k].z = pctFmt; });
+    }
+  });
+
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:numCols-1}},
+    {s:{r:1,c:0}, e:{r:1,c:numCols-1}},
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Financial Summary');
+
+  const dateStr = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `${co}_financials_${currentPeriod}_${dateStr}.xlsx`);
 }
 
 // ── Start ──
