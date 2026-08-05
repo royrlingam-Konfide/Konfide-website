@@ -1085,12 +1085,14 @@ function exportExcel(){
   }
   rowMeta.push({kind:'header'});
 
+  const idToRow = {};
   ITEMS.forEach(item=>{
     if(item.type==='section'){
       aoa.push([item.label.toUpperCase(), ...Array(numCols-1).fill('')]);
       rowMeta.push({kind:'section'});
       return;
     }
+    idToRow[item.id] = aoa.length;
     let v, row;
     if(isMulti){
       const mvs = monthData.map(md => md[item.id] !== undefined ? md[item.id] : 0);
@@ -1102,7 +1104,7 @@ function exportExcel(){
       row = [item.label, v, totalInc ? v/totalInc : 0];
     }
     aoa.push(row);
-    rowMeta.push({kind:item.type, level:item.level, positive: v>=0, final: !!item.final});
+    rowMeta.push({kind:item.type, level:item.level, positive: v>=0, final: !!item.final, id:item.id, kids:item.kids, formula:item.formula});
   });
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -1166,6 +1168,51 @@ function exportExcel(){
       }
     }
   });
+
+  // ── Live formulas — so subtotal/total/Net Income/% cells recalc when you
+  // edit a line-item number, instead of staying frozen at the export-time value.
+  function colLetter(cIdx){ return String.fromCharCode(65+cIdx); }
+  const incRow = idToRow['t_inc'], cogsRow = idToRow['cogs'], gpRow = idToRow['gp'], expRow = idToRow['t_exp'];
+
+  if(isMulti){
+    const totalCol = numCols-1;
+    rowMeta.forEach((meta,r) => {
+      if(!meta.id) return;
+      for(let cIdx=1; cIdx<totalCol; cIdx++){
+        const col = colLetter(cIdx);
+        const k = ref(r,cIdx);
+        if(!ws[k]) continue;
+        if(meta.kids){
+          ws[k].f = `SUM(${meta.kids.map(kid=>col+(idToRow[kid]+1)).join(',')})`;
+        } else if(meta.formula==='gp'){
+          ws[k].f = `${col}${incRow+1}-${col}${cogsRow+1}`;
+        } else if(meta.formula==='ni'){
+          ws[k].f = `${col}${gpRow+1}-${col}${expRow+1}`;
+        }
+      }
+      // Row's own Total column = sum across that row's month columns
+      const firstCol = colLetter(1), lastCol = colLetter(totalCol-1);
+      const kTotal = ref(r, totalCol);
+      if(ws[kTotal]) ws[kTotal].f = `SUM(${firstCol}${r+1}:${lastCol}${r+1})`;
+    });
+  } else {
+    rowMeta.forEach((meta,r) => {
+      if(!meta.id) return;
+      const kVal = ref(r,1);
+      if(ws[kVal]){
+        if(meta.kids){
+          ws[kVal].f = `SUM(${meta.kids.map(kid=>'B'+(idToRow[kid]+1)).join(',')})`;
+        } else if(meta.formula==='gp'){
+          ws[kVal].f = `B${incRow+1}-B${cogsRow+1}`;
+        } else if(meta.formula==='ni'){
+          ws[kVal].f = `B${gpRow+1}-B${expRow+1}`;
+        }
+      }
+      // % of Income = live formula off this row's own value + Total Income
+      const kPct = ref(r,2);
+      if(ws[kPct]) ws[kPct].f = `IF(B${incRow+1}=0,0,B${r+1}/B${incRow+1})`;
+    });
+  }
 
   ws['!merges'] = [
     {s:{r:0,c:0}, e:{r:0,c:numCols-1}},

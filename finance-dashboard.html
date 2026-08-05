@@ -772,6 +772,7 @@ function exportExcel() {
   rowMeta.push({kind:'blank'});
 
   // ── KPI summary block ──
+  const kpiRow = {};
   aoa.push(['KEY METRICS', ...Array(numCols-1).fill('')]);
   rowMeta.push({kind:'section'});
   [
@@ -782,8 +783,9 @@ function exportExcel() {
     ['Operating Expenses', opex, 'money', null],
     ['Net Income', ni, 'money', 'summary'],
   ].forEach(([label, val, fmtType, kind]) => {
+    kpiRow[label] = aoa.length;
     aoa.push([label, val, ...Array(numCols-2).fill('')]);
-    rowMeta.push({kind: kind||'line', fmt: fmtType, positive: val>=0, final: kind==='summary'});
+    rowMeta.push({kind: kind||'line', fmt: fmtType, positive: val>=0, final: kind==='summary', kpiLabel: label});
   });
   aoa.push([]);
   rowMeta.push({kind:'blank'});
@@ -793,12 +795,15 @@ function exportExcel() {
   rowMeta.push({kind:'section'});
   aoa.push(['Month','Revenue','COGS','Gross Profit','GP Margin','Op Expenses','Net Income','Net Margin']);
   rowMeta.push({kind:'header'});
+  const monthRowStart = aoa.length;
   d.forEach(r=>{
     aoa.push([r.month, r.revenue, r.cogs, r.grossProfit, r.grossMarginPct/100, r.operatingExpenses, r.netIncome, r.netMarginPct/100]);
     rowMeta.push({kind:'monthrow'});
   });
+  const monthRowEnd = aoa.length - 1; // last month row index
   aoa.push(['TOTAL', rev, cogs, gp, gm, opex, ni, nm]);
   rowMeta.push({kind:'total'});
+  const totalRow = aoa.length - 1;
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   ws['!cols'] = [{wch:22},{wch:14},{wch:14},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12}];
@@ -846,6 +851,33 @@ function exportExcel() {
       [4,7].forEach(cIdx=>{ const k=ref(r,cIdx); if(ws[k]) ws[k].z = pctFmt; });
     }
   });
+
+  // ── Live formulas — so Gross Profit/Net Income/margins/TOTAL row/KPI block
+  // all recalc when you edit a month's Revenue, COGS, or Op Expenses.
+  // Chain: month row (D/E/G/H) -> TOTAL row (B:H) -> KPI block (references TOTAL row)
+  for(let i=monthRowStart; i<=monthRowEnd; i++){
+    const row1 = i+1;
+    const kD = ref(i,3); if(ws[kD]) ws[kD].f = `B${row1}-C${row1}`;                          // Gross Profit
+    const kE = ref(i,4); if(ws[kE]) ws[kE].f = `IF(B${row1}=0,0,D${row1}/B${row1})`;          // GP Margin
+    const kG = ref(i,6); if(ws[kG]) ws[kG].f = `D${row1}-F${row1}`;                            // Net Income
+    const kH = ref(i,7); if(ws[kH]) ws[kH].f = `IF(B${row1}=0,0,G${row1}/B${row1})`;          // Net Margin
+  }
+  const firstR = monthRowStart+1, lastR = monthRowEnd+1, totalR = totalRow+1;
+  ['B','C','D','F','G'].forEach(col=>{
+    const k = ref(totalRow, col.charCodeAt(0)-65);
+    if(ws[k]) ws[k].f = `SUM(${col}${firstR}:${col}${lastR})`;
+  });
+  { const k=ref(totalRow,4); if(ws[k]) ws[k].f = `IF(B${totalR}=0,0,D${totalR}/B${totalR})`; }
+  { const k=ref(totalRow,7); if(ws[k]) ws[k].f = `IF(B${totalR}=0,0,G${totalR}/B${totalR})`; }
+
+  // KPI block references the TOTAL row directly
+  const kpiCol = {'Revenue':'B','COGS':'C','Gross Profit':'D','Operating Expenses':'F','Net Income':'G'};
+  Object.keys(kpiCol).forEach(label=>{
+    const r = kpiRow[label];
+    const k = ref(r,1);
+    if(ws[k]) ws[k].f = `${kpiCol[label]}${totalR}`;
+  });
+  { const k = ref(kpiRow['Gross Margin'],1); if(ws[k]) ws[k].f = `IF(${kpiCol['Revenue']}${totalR}=0,0,${kpiCol['Gross Profit']}${totalR}/${kpiCol['Revenue']}${totalR})`; }
 
   ws['!merges'] = [
     {s:{r:0,c:0}, e:{r:0,c:numCols-1}},
