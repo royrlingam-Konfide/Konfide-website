@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
 :root{
   --bg:#F1F4F9;--surface:#fff;--border:#E2E8F0;
@@ -169,6 +170,7 @@ tr.pl-summary.final td{font-size:.92rem;border-top:3px double var(--border);}
     <div class="hdr-co" id="hdr-co">Konfide Properties</div>
     <div class="hdr-actions">
       <button class="print-btn" onclick="printPL()">🖨 Print P&amp;L</button>
+      <button class="print-btn" onclick="exportExcel()">⬇ Download Excel</button>
       <button class="tpl-btn" onclick="dlTemplate()">&#8595; CSV Template</button>
       <label class="upload-lbl" for="file-in">&#8593; Upload CSV</label>
       <input type="file" id="file-in" accept=".csv" onchange="loadCSV(event)">
@@ -761,6 +763,123 @@ function dlTemplate(){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
   a.download='konfide_properties_template.csv'; a.click();
+}
+
+// ── Download Excel (.xlsx) — styled to match the print/PDF P&L ──
+function exportExcel(){
+  const qMulti = (period==='quarterly' && isMultiPeriod);
+  const yr = selYear==='all' ? 2026 : selYear;
+  const numCols = qMulti ? 5 : 3;
+
+  const monthData = qMulti ? QMAP[selQ].map(m => computeForMonthYear(m, yr)) : null;
+  const c = compute();
+  const totalInc = c.t_inc;
+
+  const aoa = [];
+  const rowMeta = [];
+
+  aoa.push([`${LLCS[llc].name} — Profit & Loss Statement`, ...Array(numCols-1).fill('')]);
+  rowMeta.push({kind:'title'});
+  aoa.push([`Generated ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}`, ...Array(numCols-1).fill('')]);
+  rowMeta.push({kind:'subtitle'});
+  aoa.push([]);
+  rowMeta.push({kind:'blank'});
+
+  if(qMulti){
+    const labels = QMAP[selQ].map(m=>MONTH_LABELS[MONTHS.indexOf(m)]);
+    aoa.push(['Category', ...labels, 'Q Total']);
+  } else {
+    aoa.push(['Category', 'Amount', '% of Income']);
+  }
+  rowMeta.push({kind:'header'});
+
+  ITEMS.forEach(item=>{
+    if(item.type==='section'){
+      aoa.push([item.label.toUpperCase(), ...Array(numCols-1).fill('')]);
+      rowMeta.push({kind:'section'});
+      return;
+    }
+    let v, row;
+    const indentLevel = item.type==='line' ? 1 : 0;
+    if(qMulti){
+      const mvs = monthData.map(md => md[item.id] !== undefined ? md[item.id] : 0);
+      const rowTotal = mvs.reduce((s,x)=>s+x,0);
+      v = rowTotal;
+      row = [item.label, ...mvs, rowTotal];
+    } else {
+      v = c[item.id] !== undefined ? c[item.id] : getVal(item.id);
+      row = [item.label, v, totalInc ? v/totalInc : 0];
+    }
+    aoa.push(row);
+    rowMeta.push({kind:item.type, level:indentLevel, positive: v>=0, final: !!item.final});
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:40}, ...Array(numCols-1).fill({wch:14})];
+
+  const TEXT='0F172A', TEXT2='475569', WHITE='FFFFFF';
+  const BORDER='CBD5E1', BORDER2='94A3B8';
+  const SECTION_BG='0F172A', TOTAL_BG='EEF0F5', HEADER_BG='F8FAFC';
+  const POS_BG='ECFDF5', NEG_BG='FEF2F2', GREEN='059669', RED='DC2626';
+  const moneyFmt = '$#,##0.00;[Red]-$#,##0.00';
+  const pctFmt = '0.00%';
+  const thin = {style:'thin', color:{rgb:BORDER}};
+  const medium = {style:'medium', color:{rgb:BORDER2}};
+  const double = {style:'double', color:{rgb:BORDER2}};
+
+  function ref(r,cIdx){ return XLSX.utils.encode_cell({r, c:cIdx}); }
+  function ensure(r,cIdx){
+    const k = ref(r,cIdx);
+    if(!ws[k]) ws[k] = {t:'s', v:''};
+    return k;
+  }
+  function styleRow(r, style){
+    for(let cIdx=0; cIdx<numCols; cIdx++){
+      const k = ensure(r,cIdx);
+      ws[k].s = Object.assign({}, ws[k].s, style);
+    }
+  }
+
+  rowMeta.forEach((meta, r) => {
+    if(meta.kind==='title'){
+      styleRow(r, {font:{bold:true, sz:14, color:{rgb:TEXT}}});
+    } else if(meta.kind==='subtitle'){
+      styleRow(r, {font:{italic:true, sz:10, color:{rgb:TEXT2}}});
+    } else if(meta.kind==='header'){
+      styleRow(r, {font:{bold:true, sz:10, color:{rgb:TEXT2}}, fill:{patternType:'solid', fgColor:{rgb:HEADER_BG}}, border:{bottom:medium}, alignment:{horizontal:'right'}});
+      ws[ref(r,0)].s.alignment = {horizontal:'left'};
+    } else if(meta.kind==='section'){
+      styleRow(r, {font:{bold:true, sz:10, color:{rgb:WHITE}}, fill:{patternType:'solid', fgColor:{rgb:SECTION_BG}}});
+    } else if(meta.kind==='line'){
+      styleRow(r, {font:{sz:10, color:{rgb:TEXT2}}});
+      ws[ref(r,0)].s.alignment = {indent: meta.level};
+    } else if(meta.kind==='total'){
+      styleRow(r, {font:{bold:true, sz:10, color:{rgb:TEXT}}, fill:{patternType:'solid', fgColor:{rgb:TOTAL_BG}}, border:{top:medium, bottom:medium}});
+    } else if(meta.kind==='summary'){
+      const bg = meta.positive ? POS_BG : NEG_BG;
+      const fc = meta.positive ? GREEN : RED;
+      styleRow(r, {font:{bold:true, sz: meta.final?12:10, color:{rgb:fc}}, fill:{patternType:'solid', fgColor:{rgb:bg}}, border: meta.final ? {top:double} : {top:thin}});
+    }
+
+    if(!['title','subtitle','blank','header','section'].includes(meta.kind)){
+      for(let cIdx=1; cIdx<numCols; cIdx++){
+        const k = ref(r,cIdx);
+        if(ws[k]) ws[k].z = (!qMulti && cIdx===2) ? pctFmt : moneyFmt;
+      }
+    }
+  });
+
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:numCols-1}},
+    {s:{r:1,c:0}, e:{r:1,c:numCols-1}},
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'P&L');
+
+  const periodSlug = period==='quarterly' ? selQ : period==='monthly' ? selM : 'yearly';
+  const dateStr = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `${llc}_pl_${periodSlug}_${selYear}_${dateStr}.xlsx`);
 }
 
 async function init(){
