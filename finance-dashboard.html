@@ -368,13 +368,58 @@ if (sessionStorage.getItem('kc_auth') === '1') {
   document.getElementById('app').style.display = 'block';
 }
 
+// ── R Square Education ──────────────────────────────────────────────────────
+// Live data comes from a published Google Sheet (see COMPANIES.rsquare.sheetUrl),
+// same workflow as the Smart Beginnings entities. The sheet is a P&L in
+// `Label,Jan,Feb,…,Dec` shape (identical to rsquare_pl_2025.csv). Rows whose
+// Label is in RSQUARE_INCOME_LABELS count as revenue; rows in RSQUARE_COGS_LABELS
+// count as COGS; every other row is an Operating Expense. The RSQUARE_2025 array
+// below is a baked-in fallback used only if the sheet fails to load.
+const RSQUARE_INCOME_LABELS = ['Service Income'];
+const RSQUARE_COGS_LABELS   = ['Merchant account fees', 'Course materials'];
+
+const RSQUARE_2025 = [
+  { m:'Jan 2025', revenue:46525.00, cogs:125.90,  operatingExpenses:8310.93  },
+  { m:'Feb 2025', revenue:8875.00,  cogs:1159.17, operatingExpenses:21048.47 },
+  { m:'Mar 2025', revenue:0.00,     cogs:297.36,  operatingExpenses:9707.81  },
+  { m:'Apr 2025', revenue:0.00,     cogs:137.90,  operatingExpenses:6414.67  },
+  { m:'May 2025', revenue:85200.00, cogs:130.90,  operatingExpenses:17486.25 },
+  { m:'Jun 2025', revenue:17250.00, cogs:1872.30, operatingExpenses:28726.88 },
+  { m:'Jul 2025', revenue:6900.00,  cogs:453.69,  operatingExpenses:7831.72  },
+  { m:'Aug 2025', revenue:0.00,     cogs:328.43,  operatingExpenses:4655.51  },
+  { m:'Sep 2025', revenue:44100.00, cogs:742.90,  operatingExpenses:44362.70 },
+  { m:'Oct 2025', revenue:7600.00,  cogs:939.52,  operatingExpenses:21915.73 },
+  { m:'Nov 2025', revenue:0.00,     cogs:308.68,  operatingExpenses:3620.08  },
+  { m:'Dec 2025', revenue:69.65,    cogs:147.90,  operatingExpenses:4250.93  }
+];
+const RSQUARE_EXPENSE_BREAKDOWN = [
+  ['Konfide Management Fee', 81105.00],
+  ['Rent', 31294.12],
+  ['Konfide Education Group', 23000.00],
+  ['Advertising & marketing', 17000.00],
+  ['Owner withdrawal', 13200.00],
+  ['Merchant account fees', 6045.65],
+  ['SBA EIDL loan', 6150.00],
+  ['Software & apps', 1657.74],
+  ['Electricity', 1371.08],
+  ['Heating & Cooling', 1134.15],
+  ['Repairs & maintenance', 1100.00],
+  ['Legal & professional fees', 675.00],
+  ['Course materials', 599.00],
+  ['Bank fees & service charges', 346.50],
+  ['Internet & TV services', 293.09],
+  ['Taxes paid', 5.00]
+];
+
 // ── Company config ──
 const COMPANIES = {
   kirk:       { name:'Smart Beginnings Kirk & Butterfield', type:'Early Childhood Education', icon:'🏫', accent:'#3B82F6', accentLight:'rgba(59,130,246,.1)', cats:['Infant Care','Toddler Care','Preschool','School Age'], catSplit:[0.35,0.28,0.25,0.12] },
   ogden:      { name:'Smart Beginnings Ogden & IL 59',     type:'Early Childhood Education', icon:'🏫', accent:'#8B5CF6', accentLight:'rgba(139,92,246,.1)',  cats:['Infant Care','Toddler Care','Preschool','School Age'], catSplit:[0.32,0.30,0.26,0.12] },
   oswego:     { name:'Smart Beginnings Oswego',            type:'Early Childhood Education', icon:'🏫', accent:'#14B8A6', accentLight:'rgba(20,184,166,.1)',   cats:['Infant Care','Toddler Care','Preschool','School Age'], catSplit:[0.38,0.27,0.23,0.12] },
   properties: { name:'Konfide Properties',                 type:'Real Estate Investment',    icon:'🏢', accent:'#BF9B50', accentLight:'rgba(191,155,80,.1)',   cats:['Residential Rental','Commercial Rental','Appreciation / Sales','Other Income'], catSplit:[0.62,0.28,0.07,0.03] },
-  rsquare:    { name:'R Square Education',                 type:'Medical Education & Training', icon:'🎓', accent:'#F59E0B', accentLight:'rgba(245,158,11,.1)', cats:['USMLE Step 1','USMLE Step 2','USMLE Step 3','Clinical Rotations'], catSplit:[0.40,0.35,0.15,0.10] }
+  rsquare:    { name:'R Square Education',                 type:'Medical Education & Training', icon:'🎓', accent:'#F59E0B', accentLight:'rgba(245,158,11,.1)', cats:['Service Income'], catSplit:[1.0], expenseBreakdown:RSQUARE_EXPENSE_BREAKDOWN, realData:RSQUARE_2025,
+    // Published Google Sheet (File → Share → Publish to web → CSV). Edit the sheet to update the dashboard.
+    sheetUrl:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQwMCaO49ovfMzrrZASh2DEmVorBceFITABxHPHsNpaembmdV_FXy8rNZyfYaz9YywOhP8JcXg2aNTB/pub?output=csv' }
 };
 
 // ── Sample data (deterministic) ──
@@ -407,6 +452,74 @@ function buildSample(co) {
   });
 }
 
+// Real per-month figures ({revenue, cogs, operatingExpenses}) → full row shape.
+function buildReal(rows) {
+  return rows.map(r => {
+    const rev = r.revenue, cogs = r.cogs, opex = r.operatingExpenses;
+    const gp = rev - cogs, ni = gp - opex;
+    return { month:r.m, revenue:rev, cogs, grossProfit:gp,
+      grossMarginPct: rev>0 ? +((gp/rev)*100).toFixed(1) : 0,
+      operatingExpenses:opex, netIncome:ni,
+      netMarginPct: rev>0 ? +((ni/rev)*100).toFixed(1) : 0 };
+  });
+}
+
+function buildInitial(co) {
+  const cfg = COMPANIES[co];
+  return cfg && cfg.realData ? buildReal(cfg.realData) : buildSample(co);
+}
+
+// Parse a `Label,Jan,…,Dec` P&L (Google Sheet / CSV) into the shapes the
+// dashboard needs: 12 monthly {m,revenue,cogs,operatingExpenses} rows plus a
+// [label, yearTotal] expense-breakdown list. Returns null if nothing parsed.
+const MON_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function buildFromLineItems(rows, incomeLabels, cogsLabels) {
+  const num = v => parseFloat(String(v == null ? '' : v).replace(/[$,\s]/g,'')) || 0;
+  const income = Array(12).fill(0), cogs = Array(12).fill(0), opex = Array(12).fill(0);
+  const breakdown = [];
+  let seen = 0;
+  rows.forEach(r => {
+    const label = (r.Label || r.label || '').trim();
+    if (!label) return;
+    const vals = MON_ABBR.map(m => num(r[m] != null ? r[m] : r[m.toLowerCase()]));
+    if (!vals.some(v => v)) return;
+    seen++;
+    const bucket = incomeLabels.includes(label) ? income
+                 : cogsLabels.includes(label)   ? cogs
+                 : opex;
+    for (let i = 0; i < 12; i++) bucket[i] += vals[i];
+    if (bucket !== income) breakdown.push([label, vals.reduce((s,v)=>s+v,0)]);
+  });
+  if (!seen) return null;
+  const monthly = MON_ABBR.map((m,i) => ({
+    m: `${m} 2025`, revenue: +income[i].toFixed(2),
+    cogs: +cogs[i].toFixed(2), operatingExpenses: +opex[i].toFixed(2)
+  }));
+  breakdown.sort((a,b) => b[1]-a[1]);
+  return { monthly, breakdown };
+}
+
+// Pull the published Google Sheet for a company and refresh the view from it.
+async function loadFromSheet(co) {
+  const cfg = COMPANIES[co];
+  if (!cfg || !cfg.sheetUrl) return;
+  try {
+    const text = await (await fetch(cfg.sheetUrl)).text();
+    const rows = Papa.parse(text, { header:true, skipEmptyLines:true }).data;
+    const built = buildFromLineItems(rows, RSQUARE_INCOME_LABELS, RSQUARE_COGS_LABELS);
+    if (!built) return;
+    allData = buildReal(built.monthly);
+    cfg.expenseBreakdown = built.breakdown;
+    const banner = document.getElementById('csv-banner');
+    document.getElementById('csv-banner-text').innerHTML =
+      `Loaded <strong>${built.breakdown.length + 1} line items</strong> from the published Google Sheet.`;
+    banner.style.display = 'flex';
+    render();
+  } catch (e) {
+    console.warn('Sheet auto-load failed, using baked-in data:', e);
+  }
+}
+
 // ── State ──
 let co = 'kirk';
 let allData = [];
@@ -430,8 +543,9 @@ function init() {
   document.documentElement.style.setProperty('--accent', cfg.accent);
   document.documentElement.style.setProperty('--accent-light', cfg.accentLight);
 
-  allData = buildSample(co);
+  allData = buildInitial(co);
   render();
+  loadFromSheet(co);   // async: refreshes from the published Google Sheet if one is configured
 }
 
 // ── Period filter ──
@@ -594,12 +708,31 @@ function updateCharts() {
 
   // Expense Breakdown (donut)
   const totalCost = d.reduce((s,r) => s + r.cogs + r.operatingExpenses, 0);
+  let expLabels, expData, expColors;
+  if (cfg.expenseBreakdown) {
+    // Real categories, scaled to the selected period's share of the year.
+    const yearCost = cfg.expenseBreakdown.reduce((s,[,v]) => s+v, 0);
+    const scale = yearCost > 0 ? totalCost / yearCost : 0;
+    const TOP = 8;
+    const sorted = [...cfg.expenseBreakdown].sort((a,b) => b[1]-a[1]);
+    const shown = sorted.length > TOP
+      ? [...sorted.slice(0,TOP), ['Other', sorted.slice(TOP).reduce((s,[,v]) => s+v, 0)]]
+      : sorted;
+    expLabels = shown.map(([l]) => l);
+    expData   = shown.map(([,v]) => Math.round(v * scale));
+    const PALETTE = ['#F59E0B','#3B82F6','#8B5CF6','#10B981','#EF4444','#06B6D4','#F43F5E','#64748B','#CBD5E1'];
+    expColors = expLabels.map((_,i) => PALETTE[i % PALETTE.length]);
+  } else {
+    expLabels = DEPT_LABELS;
+    expData   = DEPT_SPLIT.map(p => Math.round(totalCost*p));
+    expColors = DEPT_COLORS;
+  }
   destroyChart('expense-chart');
   charts['expense'] = new Chart(document.getElementById('expense-chart'), {
     type:'doughnut',
     data:{
-      labels: DEPT_LABELS,
-      datasets:[{ data: DEPT_SPLIT.map(p => Math.round(totalCost*p)), backgroundColor: DEPT_COLORS, borderWidth:0, hoverOffset:6 }]
+      labels: expLabels,
+      datasets:[{ data: expData, backgroundColor: expColors, borderWidth:0, hoverOffset:6 }]
     },
     options:{
       responsive:true, maintainAspectRatio:false, cutout:'62%',
@@ -710,9 +843,10 @@ function handleCSV(e) {
 }
 
 function resetData() {
-  allData = buildSample(co);
+  allData = buildInitial(co);
   document.getElementById('csv-banner').style.display = 'none';
   render();
+  loadFromSheet(co);
 }
 
 // ── Template Download ──
