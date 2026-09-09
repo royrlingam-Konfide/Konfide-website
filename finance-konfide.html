@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cash Flow — Konfide Inc.</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+:root{
+  --bg:#F1F4F9;--surface:#fff;--border:#E2E8F0;
+  --text:#0F172A;--text-2:#475569;--text-3:#94A3B8;
+  --gold:#BF9B50;--green:#059669;--red:#DC2626;--blue:#2563EB;
+  --radius:14px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
+  --shadow-lg:0 4px 28px rgba(0,0,0,.1);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* Gate */
+#gate{position:fixed;inset:0;z-index:1000;background:#060A12;display:flex;align-items:center;justify-content:center;}
+.gate-box{background:#0B1120;border:1px solid rgba(191,155,80,.22);padding:52px 44px;width:100%;max-width:400px;text-align:center;}
+.gate-logo{height:24px;margin-bottom:32px;}
+.gate-title{font-size:1.5rem;font-weight:300;color:#EDE8DE;margin-bottom:6px;}
+.gate-sub{font-size:.75rem;color:#545B6A;margin-bottom:28px;}
+.gate-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(191,155,80,.2);color:#EDE8DE;font-family:'Inter',sans-serif;font-size:.9rem;padding:13px 16px;outline:none;margin-bottom:12px;transition:border-color .2s;}
+.gate-input:focus{border-color:rgba(191,155,80,.6);}
+.gate-input::placeholder{color:#3D4456;}
+.gate-btn{width:100%;background:#BF9B50;color:#060A12;border:none;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;padding:14px;cursor:pointer;}
+.gate-btn:hover{background:#D4AF60;}
+.gate-err{font-size:.75rem;color:#EF4444;margin-top:10px;display:none;}
+
+/* App */
+#app{display:none;}
+
+/* Header */
+.hdr{background:#060A12;border-bottom:1px solid rgba(191,155,80,.15);height:60px;display:flex;align-items:center;padding:0 40px;gap:20px;}
+.hdr img{height:18px;flex-shrink:0;}
+.hdr-div{width:1px;height:22px;background:rgba(255,255,255,.1);}
+.back{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:#545B6A;text-decoration:none;transition:color .2s;white-space:nowrap;}
+.back:hover{color:#BF9B50;}
+.hdr-co{font-size:.82rem;font-weight:500;color:#EDE8DE;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hdr-actions{display:flex;align-items:center;gap:10px;margin-left:auto;}
+.upload-lbl{display:inline-flex;align-items:center;gap:7px;background:rgba(191,155,80,.1);border:1px solid rgba(191,155,80,.25);color:#BF9B50;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;padding:7px 16px;cursor:pointer;transition:background .2s;white-space:nowrap;}
+.upload-lbl:hover{background:rgba(191,155,80,.2);}
+.tpl-btn{font-size:.68rem;color:#545B6A;cursor:pointer;background:none;border:none;padding:7px;transition:color .2s;white-space:nowrap;}
+.tpl-btn:hover{color:#BF9B50;}
+#file-in{display:none;}
+
+/* Page */
+.page{max-width:1320px;margin:0 auto;padding:36px 40px;}
+
+/* Company bar */
+.co-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:20px;}
+.co-left{display:flex;align-items:center;gap:14px;}
+.co-icon{width:48px;height:48px;border-radius:12px;background:rgba(59,130,246,.1);font-size:1.3rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.co-h1{font-size:1.6rem;font-weight:300;letter-spacing:-.02em;color:var(--text);line-height:1.1;}
+.co-sub{font-size:.74rem;color:var(--text-3);margin-top:2px;}
+.co-badge{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;background:rgba(5,150,105,.1);color:#059669;border:1px solid rgba(5,150,105,.25);padding:5px 12px;border-radius:100px;}
+
+/* Period selector */
+.period-bar{background:#0F1F3D;border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;box-shadow:0 4px 20px rgba(15,31,61,.3);display:flex;align-items:center;flex-wrap:wrap;gap:14px;}
+.period-label{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45);font-weight:600;white-space:nowrap;}
+.period-modes{display:flex;gap:3px;background:rgba(255,255,255,.07);border-radius:8px;padding:3px;}
+.pm{background:none;border:none;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;color:rgba(255,255,255,.55);padding:6px 16px;border-radius:6px;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap;}
+.pm.active{background:#BF9B50;color:#fff;font-weight:600;}
+.pm:hover:not(.active){color:#fff;background:rgba(255,255,255,.1);}
+.pm:disabled{opacity:.3;cursor:default;}
+.period-div{width:1px;height:20px;background:rgba(255,255,255,.12);}
+.sub-pills{display:flex;gap:5px;flex-wrap:wrap;}
+.sp{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);font-family:'Inter',sans-serif;font-size:.7rem;font-weight:500;color:rgba(255,255,255,.65);padding:5px 12px;border-radius:6px;cursor:pointer;transition:background .15s,color .15s,border-color .15s;white-space:nowrap;}
+.sp.active{background:#BF9B50;color:#fff;border-color:#BF9B50;font-weight:600;}
+.sp:hover:not(.active){background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.25);}
+.period-hint{font-size:.65rem;color:rgba(191,155,80,.7);font-style:italic;}
+
+/* CSV banner */
+.csv-banner{background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.2);border-radius:10px;padding:12px 18px;margin-bottom:20px;display:none;align-items:center;gap:10px;font-size:.78rem;color:var(--text-2);}
+.csv-banner a{color:var(--blue);cursor:pointer;font-weight:500;}
+
+/* KPI row */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--k-clr,#2563EB);}
+.kpi-lbl{font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);font-weight:500;margin-bottom:9px;}
+.kpi-val{font-size:1.45rem;font-weight:700;letter-spacing:-.04em;line-height:1;font-family:'JetBrains Mono',monospace;}
+.kpi-sub{font-size:.7rem;color:var(--text-3);margin-top:7px;}
+.pos-val{color:var(--green);}
+.neg-val{color:var(--red);}
+
+/* Charts */
+.charts-row{display:grid;grid-template-columns:1fr 2fr;gap:18px;margin-bottom:22px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);}
+.chart-hdr{margin-bottom:18px;}
+.chart-ttl{font-size:.85rem;font-weight:600;color:var(--text);}
+.chart-sub{font-size:.7rem;color:var(--text-3);margin-top:2px;}
+.chart-wrap{position:relative;height:220px;}
+
+/* Trend chart (yearly mode) */
+.trend-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:22px;display:none;}
+.trend-wrap{position:relative;height:200px;}
+
+/* P&L Table */
+.pl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:36px;}
+.pl-hdr{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.pl-ttl{font-size:.88rem;font-weight:600;color:var(--text);}
+.pl-period-tag{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;background:#F0F4FF;color:var(--blue);border:1px solid #BFDBFE;padding:4px 10px;border-radius:6px;}
+.pl-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.expand-all-btn{font-size:.68rem;color:var(--blue);cursor:pointer;background:none;border:none;padding:0;}
+
+.pl-wrap{overflow-x:auto;}
+table.pl{width:100%;border-collapse:collapse;}
+table.pl th{padding:10px 20px;text-align:left;font-size:.6rem;letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);font-weight:600;background:#FAFBFC;border-bottom:2px solid var(--border);white-space:nowrap;}
+table.pl th.r{text-align:right;}
+
+tr.pl-section td{background:#0F172A;color:#fff;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;padding:9px 20px;}
+tr.pl-cat{cursor:pointer;transition:background .15s;}
+tr.pl-cat:hover{background:#F0F4FF;}
+tr.pl-cat td{padding:11px 20px;font-weight:600;font-size:.82rem;color:var(--text);border-bottom:1px solid #F1F4F9;}
+tr.pl-cat.expanded{background:#F8FAFF;}
+tr.pl-line td{padding:9px 20px;font-size:.8rem;color:var(--text-2);border-bottom:1px solid #F8FAFC;}
+tr.pl-subtotal td{padding:9px 20px;font-size:.8rem;font-weight:700;color:var(--text);background:#F4F6FA;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+tr.pl-total td{padding:11px 20px;font-size:.83rem;font-weight:700;color:var(--text);background:#EEF0F5;border-top:2px solid #CBD5E1;border-bottom:2px solid #CBD5E1;}
+tr.pl-summary td{padding:12px 20px;font-size:.84rem;font-weight:700;color:var(--text);}
+tr.pl-summary.positive td{background:rgba(5,150,105,.06);}
+tr.pl-summary.negative td{background:rgba(220,38,38,.05);}
+tr.pl-summary.final td{font-size:.92rem;border-top:3px double var(--border);}
+
+.expand-icon{display:inline-block;width:16px;color:var(--text-3);font-size:.8rem;transition:transform .2s;vertical-align:middle;}
+.r{text-align:right;font-family:'JetBrains Mono',monospace;font-size:.78rem;white-space:nowrap;}
+.pct-cell{text-align:right;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--text-3);white-space:nowrap;}
+.pct-bar{display:inline-block;height:4px;background:var(--blue);border-radius:2px;margin-right:6px;vertical-align:middle;opacity:.35;}
+
+.fmt{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);font-size:.78rem;color:var(--text-2);line-height:1.8;}
+.fmt h3{font-size:.83rem;font-weight:600;color:var(--text);margin-bottom:10px;}
+code{background:#F1F4F9;border:1px solid var(--border);padding:1px 6px;border-radius:4px;font-size:.73rem;font-family:'JetBrains Mono',monospace;color:#E11D48;}
+
+@media(max-width:1024px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
+
+.print-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(191,155,80,.1);border:1px solid rgba(191,155,80,.25);color:#BF9B50;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;padding:7px 16px;cursor:pointer;transition:background .2s;white-space:nowrap;}
+.print-btn:hover{background:rgba(191,155,80,.2);}
+
+@media print {
+  .hdr, .kpi-row, .charts-row, .period-bar, .print-btn,
+  .tpl-btn, .upload-lbl, #file-in, .expand-all-btn,
+  .fmt, .no-data { display:none !important; }
+  body { background:#fff !important; color:#000 !important; }
+  .page { padding:0 !important; max-width:100% !important; }
+  .card { box-shadow:none !important; border:1px solid #ddd !important; break-inside:avoid; }
+  .pl-section td { background:#1a1a1a !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .print-header { display:block !important; }
+}
+.print-header { display:none; padding:0 0 18px; }
+.print-header h2 { font-size:1.1rem; font-weight:600; color:#0F172A; }
+.print-header p { font-size:.78rem; color:#64748B; margin-top:4px; }
+@media(max-width:768px){
+  .hdr{padding:0 16px;}.page{padding:20px 16px;}
+  .kpi-row{grid-template-columns:1fr 1fr;}
+  .charts-row{grid-template-columns:1fr;}
+  .period-bar{gap:10px;}
+}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-box">
+    <img src="LogoWhite.png" class="gate-logo" alt="Konfide Capital">
+    <div class="gate-title">Financial Portal</div>
+    <div class="gate-sub">Restricted — authorized personnel only</div>
+    <input type="password" id="gate-in" class="gate-input" placeholder="Enter access code" onkeydown="if(event.key==='Enter')auth()">
+    <button class="gate-btn" onclick="auth()">Access Portal</button>
+    <div class="gate-err" id="gate-err">Incorrect access code.</div>
+  </div>
+</div>
+
+<div id="app">
+  <header class="hdr">
+    <img src="LogoWhite.png" alt="Konfide Capital">
+    <div class="hdr-div"></div>
+    <a href="finance.html" class="back">← Portal</a>
+    <div class="hdr-div"></div>
+    <div class="hdr-co" id="hdr-co"></div>
+    <div class="hdr-actions">
+      <button class="print-btn" onclick="printPL()">🖨 Print P&amp;L</button>
+      <button class="print-btn" onclick="exportExcel()">⬇ Download Excel</button>
+      <button class="tpl-btn" onclick="dlTemplate()">⬇ CSV Template</button>
+      <label class="upload-lbl" for="file-in">↑ Upload CSV</label>
+      <input type="file" id="file-in" accept=".csv" onchange="loadCSV(event)">
+    </div>
+  </header>
+
+  <div class="page">
+
+    <div class="co-bar">
+      <div class="co-left">
+        <div class="co-icon" id="co-icon">🏛️</div>
+        <div>
+          <div class="co-h1" id="co-h1">Konfide Inc.</div>
+          <div class="co-sub">Cash Flow Statement · Management Company</div>
+        </div>
+      </div>
+      <div class="co-badge">Active</div>
+    </div>
+
+    <!-- Period Selector -->
+    <div class="period-bar">
+      <div class="period-label">View by</div>
+      <div class="period-modes">
+        <button class="pm" id="pm-monthly"  onclick="setPeriod('monthly')">Monthly</button>
+        <button class="pm" id="pm-quarterly" onclick="setPeriod('quarterly')">Quarterly</button>
+        <button class="pm active" id="pm-yearly" onclick="setPeriod('yearly')">Yearly</button>
+      </div>
+      <div class="period-div" id="period-div" style="display:none;"></div>
+      <div class="sub-pills" id="sub-pills"></div>
+      <div class="period-hint" id="period-hint" style="display:none;">Upload a monthly CSV to enable period filtering</div>
+    </div>
+
+    <div class="csv-banner" id="csv-banner">
+      ✓ <span id="csv-msg">Data loaded.</span> <a onclick="resetData()">Reset to blank</a>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-row">
+      <div class="kpi" style="--k-clr:#2563EB;">
+        <div class="kpi-lbl">Total Income</div>
+        <div class="kpi-val" id="k-income">$0</div>
+        <div class="kpi-sub">Fees from all companies</div>
+      </div>
+      <div class="kpi" style="--k-clr:#64748B;">
+        <div class="kpi-lbl">Total Expenses</div>
+        <div class="kpi-val" id="k-exp">$0</div>
+        <div class="kpi-sub" id="k-exp-pct">0.00% of income</div>
+      </div>
+      <div class="kpi" style="--k-clr:#EF4444;">
+        <div class="kpi-lbl">Net Cash Flow</div>
+        <div class="kpi-val" id="k-ni">$0</div>
+        <div class="kpi-sub" id="k-ni-pct">0.00% of income</div>
+      </div>
+      <div class="kpi" style="--k-clr:#8B5CF6;">
+        <div class="kpi-lbl">Cash Flow Margin</div>
+        <div class="kpi-val" id="k-margin">0%</div>
+        <div class="kpi-sub">Net cash flow ÷ income</div>
+      </div>
+    </div>
+
+    <!-- Monthly trend (visible in yearly mode when data loaded) -->
+    <div class="trend-card" id="trend-card">
+      <div class="chart-hdr">
+        <div class="chart-ttl">Monthly Trend</div>
+        <div class="chart-sub">Income vs. Net Cash Flow across all 12 months</div>
+      </div>
+      <div class="trend-wrap"><canvas id="ch-trend"></canvas></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-hdr">
+          <div class="chart-ttl">Expense Composition</div>
+          <div class="chart-sub" id="ch-rev-sub">Share of total expenses</div>
+        </div>
+        <div class="chart-wrap"><canvas id="ch-rev"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-hdr">
+          <div class="chart-ttl">Expense Breakdown</div>
+          <div class="chart-sub" id="ch-exp-sub">Top expense categories</div>
+        </div>
+        <div class="chart-wrap"><canvas id="ch-exp"></canvas></div>
+      </div>
+    </div>
+
+    <!-- P&L Table -->
+    <div class="pl-card">
+      <div class="pl-hdr">
+        <div>
+          <div class="pl-ttl">Cash Flow Statement</div>
+        </div>
+        <div class="pl-right">
+          <span class="pl-period-tag" id="pl-period-tag">Full Year</span>
+        </div>
+      </div>
+      <div class="print-header">
+        <h2 id="print-title">P&amp;L Statement</h2>
+        <p id="print-date"></p>
+      </div>
+      <div class="pl-wrap">
+        <table class="pl">
+          <thead>
+            <tr id="pl-thead-row">
+              <th style="width:55%">Category</th>
+              <th class="r">Total</th>
+              <th class="r">% of Income</th>
+            </tr>
+          </thead>
+          <tbody id="pl-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Format guide -->
+    <div class="fmt">
+      <h3>📋 Where this data comes from</h3>
+      Numbers load automatically from the published <strong>Konfide Inc. cash-flow</strong> Google Sheet
+      (<code>Label</code> column + <code>Jan 2025…Dec 2025</code>). Edit the sheet and refresh this page — no redeploy needed.<br><br>
+      Income rows are the management fees received from each operating company; every other row is an expense.
+      Row labels must match the ones the dashboard expects — tell Claude if you add a new income source or
+      expense category so it can be registered.<br><br>
+      <strong>↑ Upload CSV</strong> lets you preview a different file without touching the sheet.
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Auth ──
+const PASS = 'Konfide2026!';
+function auth(){
+  if(document.getElementById('gate-in').value===PASS){
+    sessionStorage.setItem('kc_auth','1');
+    document.getElementById('gate').style.display='none';
+    document.getElementById('app').style.display='block';
+    init();
+  } else {
+    document.getElementById('gate-err').style.display='block';
+    document.getElementById('gate-in').value='';
+  }
+}
+if(sessionStorage.getItem('kc_auth')==='1'){
+  document.getElementById('gate').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+
+// ── Company config ──
+const COS = {
+  konfide: {name:'Konfide Inc.', icon:'🏛️', accent:'#6366F1',
+            // Published Google Sheet (File → Share → Publish to web → CSV). Edit the sheet to update the dashboard.
+            sheetUrl:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZhz_DkLJsh3lZw1EbzRk1zJaDbixWDCGzVGGd6E10SZAlV42gOGjD_FqqGOkvwSzfplTtLIiBNtQh/pub?output=csv'},
+};
+
+// ── Period state ──
+let period   = 'yearly';
+let selQ     = 'q1';
+let selM     = 'jan';
+let isMultiPeriod = false;
+
+const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const QMAP = { q1:['jan','feb','mar'], q2:['apr','may','jun'], q3:['jul','aug','sep'], q4:['oct','nov','dec'] };
+
+// ── Cash-flow item definitions ──
+// Every `line` maps to one row Label in the published Google Sheet (case-insensitive).
+// Income lines = management fees received from each operating company.
+const ITEMS = [
+  {id:'s_inc',     type:'section',  label:'Income',                               level:0},
+  {id:'in_kirk',   type:'line',     label:'Smart Beginnings Kirk & Butterfield',  level:1, parent:null, csv:['smart beginnings kirk & butterfield','smart beginnings kirk and butterfield']},
+  {id:'in_aoa',    type:'line',     label:'Smart Beginnings AOA',                 level:1, parent:null, csv:['smart beginnings aoa']},
+  {id:'in_oswego', type:'line',     label:'Smart Beginnings of Oswego',           level:1, parent:null, csv:['smart beginnings of oswego']},
+  {id:'in_rsq',    type:'line',     label:'R Square Education Inc.',              level:1, parent:null, csv:['r square education inc.','r square education']},
+  {id:'in_prop',   type:'line',     label:'Konfide Properties',                   level:1, parent:null, csv:['konfide properties']},
+  {id:'t_inc',     type:'total',    label:'Total for Income',                     level:0, kids:['in_kirk','in_aoa','in_oswego','in_rsq','in_prop']},
+
+  {id:'s_exp',     type:'section',  label:'Expenses',                             level:0},
+  {id:'e_wages',   type:'line',     label:'Salaries & wages',                     level:1, parent:null, csv:['salaries & wages']},
+  {id:'e_ptax',    type:'line',     label:'Payroll taxes',                        level:1, parent:null, csv:['payroll taxes']},
+  {id:'e_pfees',   type:'line',     label:'Payroll fees',                         level:1, parent:null, csv:['payroll fees']},
+  {id:'e_health',  type:'line',     label:'Health insurance',                     level:1, parent:null, csv:['health insurance']},
+  {id:'e_acct',    type:'line',     label:'Accounting & tax prep',               level:1, parent:null, csv:['accounting & tax prep']},
+  {id:'e_soft',    type:'line',     label:'Software',                             level:1, parent:null, csv:['software']},
+  {id:'e_veh',     type:'line',     label:'Vehicle loan',                        level:1, parent:null, csv:['vehicle loan']},
+  {id:'e_events',  type:'line',     label:'Events / contractors',                level:1, parent:null, csv:['events / contractors','events / contractors ']},
+  {id:'e_owner',   type:'line',     label:'Owner Distribution',                  level:1, parent:null, csv:['owner distribution']},
+
+  {id:'t_exp',     type:'total',    label:'Total for Expenses',                  level:0,
+    kids:['e_wages','e_ptax','e_pfees','e_health','e_acct','e_soft','e_veh','e_events','e_owner']},
+  {id:'ni',        type:'summary',  label:'Net Cash Flow',                       level:0, formula:'ni', final:true},
+];
+
+const INC_IDS = ['in_kirk','in_aoa','in_oswego','in_rsq','in_prop'];
+// Every expense line id — the single source of truth for compute(), the template, and totals.
+const RS_EXP_IDS = ['e_wages','e_ptax','e_pfees','e_health','e_acct','e_soft','e_veh','e_events','e_owner'];
+
+// ── State ──
+// vals[id] = { all: n } (simple) OR { jan: n, feb: n, ... } (multi-period)
+let vals = {};
+const expanded = new Set();
+let co = 'konfide';
+let charts = {};
+
+// ── Get value for current period ──
+function getVal(id){
+  const d = vals[id];
+  if(!d) return 0;
+  if(!isMultiPeriod) return d.all || 0;
+  switch(period){
+    case 'yearly':   return MONTHS.reduce((s,m) => s+(d[m]||0), 0);
+    case 'quarterly':return QMAP[selQ].reduce((s,m) => s+(d[m]||0), 0);
+    case 'monthly':  return d[selM] || 0;
+  }
+  return 0;
+}
+
+// Get per-month array for a line item (used in trend chart)
+function getMonthlyArr(id){
+  const d = vals[id];
+  if(!d) return MONTHS.map(()=>0);
+  return MONTHS.map(m => d[m]||0);
+}
+
+// Months that actually have data — so a partial-year upload (e.g. Jan–Jul)
+// doesn't render five empty trailing columns.
+function getPopulatedMonths(){
+  const lineIds = ITEMS.filter(i=>i.type==='line').map(i=>i.id);
+  return MONTHS.filter(m => lineIds.some(id => vals[id] && vals[id][m]));
+}
+
+// ── Compute ──
+function sum(ids){ return ids.reduce((s,id) => s+getVal(id), 0); }
+
+function compute(){
+  const v = {};
+  v.t_inc  = sum(INC_IDS);
+  v.t_exp  = sum(RS_EXP_IDS);
+  v.ni     = v.t_inc - v.t_exp;
+  // line items
+  ITEMS.filter(i=>i.type==='line').forEach(i=>{ v[i.id]=getVal(i.id); });
+  return v;
+}
+
+// ── Period UI ──
+function setPeriod(p){
+  period = p;
+  renderPeriodUI();
+  renderAll();
+}
+function setQ(q){ selQ=q; renderPeriodUI(); renderAll(); }
+function setM(m){ selM=m; renderPeriodUI(); renderAll(); }
+
+function renderPeriodUI(){
+  ['monthly','quarterly','yearly'].forEach(p=>{
+    const el=document.getElementById('pm-'+p);
+    el.classList.toggle('active',period===p);
+    el.disabled=false;
+  });
+  document.getElementById('period-hint').style.display = (!isMultiPeriod && period!=='yearly')?'block':'none';
+
+  const subEl = document.getElementById('sub-pills');
+  const divEl = document.getElementById('period-div');
+  let html = '';
+
+  if(period==='monthly'){
+    html = MONTH_LABELS.map((l,i)=>{
+      const m=MONTHS[i];
+      return `<button class="sp${m===selM?' active':''}" onclick="setM('${m}')">${l}</button>`;
+    }).join('');
+    divEl.style.display='block';
+  } else if(period==='quarterly'){
+    html = ['Q1','Q2','Q3','Q4'].map((l,i)=>{
+      const q='q'+(i+1);
+      return `<button class="sp${q===selQ?' active':''}" onclick="setQ('${q}')">${l}</button>`;
+    }).join('');
+    divEl.style.display='block';
+  } else {
+    divEl.style.display='none';
+  }
+  subEl.innerHTML = html;
+
+  // Update P&L period tag
+  let tag = 'Full Year';
+  if(period==='quarterly') tag = selQ.toUpperCase();
+  if(period==='monthly') tag = MONTH_LABELS[MONTHS.indexOf(selM)];
+  document.getElementById('pl-period-tag').textContent = tag;
+
+  // Chart subtitles
+  const periodName = period==='yearly'?'full year'
+    : period==='quarterly'?selQ.toUpperCase()
+    : MONTH_LABELS[MONTHS.indexOf(selM)];
+  document.getElementById('ch-rev-sub').textContent = `Expense composition — ${periodName}`;
+  document.getElementById('ch-exp-sub').textContent = `Top expenses — ${periodName}`;
+}
+
+// ── Visibility ──
+function visible(item){
+  if(!item.parent) return true;
+  if(!expanded.has(item.parent)) return false;
+  const par = ITEMS.find(i=>i.id===item.parent);
+  return par ? visible(par) : true;
+}
+
+// ── Format ──
+function money(n){
+  if(n===0) return '$0.00';
+  const abs = Math.abs(n);
+  const s = abs.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return (n<0?'-':'')+'$'+s;
+}
+function pct(n, total){ if(!total) return '—'; return ((n/total)*100).toFixed(2)+'%'; }
+
+// ── Render ──
+function renderAll(){ const c=compute(); renderTable(c); updateKPIs(c); updateCharts(c); }
+
+// Compute all values for a single month (used by quarterly multi-column view)
+function computeForMonth(m){
+  const savedPeriod=period, savedM=selM;
+  period='monthly'; selM=m;
+  const c=compute();
+  period=savedPeriod; selM=savedM;
+  return c;
+}
+
+function renderTable(c){
+  const totalInc = c.t_inc;
+  const qMulti = (period==='quarterly' && isMultiPeriod);
+  const yMulti = (period==='yearly' && isMultiPeriod);
+  const multiMonths = qMulti ? QMAP[selQ] : (yMulti ? getPopulatedMonths() : null);
+  const isMulti = !!multiMonths;
+  const totalLabel = qMulti ? 'Q Total' : 'YTD Total';
+
+  // Update table header
+  const theadRow = document.getElementById('pl-thead-row');
+  if(isMulti){
+    const labels = multiMonths.map(m => MONTH_LABELS[MONTHS.indexOf(m)]);
+    const catWidth = Math.max(18, 34 - (labels.length-3)*2);
+    theadRow.innerHTML = `<th style="width:${catWidth}%">Category</th>`
+      + labels.map(l=>`<th class="r">${l}</th>`).join('')
+      + `<th class="r" style="color:rgba(255,255,255,.45);font-weight:500">${totalLabel}</th>`;
+  } else {
+    theadRow.innerHTML = `<th style="width:55%">Category</th><th class="r">Total</th><th class="r">% of Income</th>`;
+  }
+
+  // Per-month computed data for quarterly/yearly multi-column view
+  const monthData = isMulti ? multiMonths.map(m => computeForMonth(m)) : null;
+
+  const body = document.getElementById('pl-body');
+  let html = '';
+
+  ITEMS.forEach(item => {
+    const v = c[item.id] !== undefined ? c[item.id] : getVal(item.id);
+    const vis = visible(item);
+    const disp = vis ? '' : 'display:none;';
+    const ind = item.level * 20;
+    const isExp = expanded.has(item.id);
+    const icon = item.type==='category' ? `<span class="expand-icon">${isExp?'▾':'▸'}</span>` : '';
+
+    if(isMulti){
+      // Quarterly/Yearly multi-column: one column per month + total
+      const mvs = monthData.map(md => md[item.id] !== undefined ? md[item.id] : 0);
+      const qtotal = mvs.reduce((s,x)=>s+x,0);
+      const mc = (val) => val ? money(val) : '';
+      const mcColor = (val) => val>=0?'var(--green)':'var(--red)';
+
+      switch(item.type){
+        case 'section':
+          html+=`<tr class="pl-section"><td>${item.label}</td><td class="r"></td><td class="r"></td><td class="r"></td><td class="r"></td></tr>`;
+          break;
+        case 'category':
+          html+=`<tr class="pl-cat${isExp?' expanded':''}" onclick="toggle('${item.id}')" style="${disp}">
+            <td style="padding-left:${ind+20}px">${icon} ${item.label}</td>
+            ${mvs.map(x=>`<td class="r">${mc(x)}</td>`).join('')}
+            <td class="r" style="opacity:.6">${mc(qtotal)}</td></tr>`;
+          break;
+        case 'line':
+          html+=`<tr class="pl-line" style="${disp}">
+            <td style="padding-left:${ind+20}px">${item.label}</td>
+            ${mvs.map(x=>`<td class="r">${mc(x)}</td>`).join('')}
+            <td class="r" style="opacity:.6">${mc(qtotal)}</td></tr>`;
+          break;
+        case 'subtotal':
+          html+=`<tr class="pl-subtotal" style="${disp}">
+            <td style="padding-left:${ind+20}px">${item.label}</td>
+            ${mvs.map(x=>`<td class="r">${money(x)}</td>`).join('')}
+            <td class="r" style="opacity:.6">${money(qtotal)}</td></tr>`;
+          break;
+        case 'total':
+          html+=`<tr class="pl-total">
+            <td>${item.label}</td>
+            ${mvs.map(x=>`<td class="r">${money(x)}</td>`).join('')}
+            <td class="r" style="opacity:.6">${money(qtotal)}</td></tr>`;
+          break;
+        case 'summary':
+          const cls2=v>=0?'positive':'negative';
+          html+=`<tr class="pl-summary ${cls2}${item.final?' final':''}">
+            <td><strong>${item.label}</strong></td>
+            ${mvs.map(x=>`<td class="r" style="color:${mcColor(x)}"><strong>${money(x)}</strong></td>`).join('')}
+            <td class="r" style="color:${mcColor(qtotal)};opacity:.75"><strong>${money(qtotal)}</strong></td></tr>`;
+          break;
+      }
+    } else {
+      // Standard single-column view
+      const pctBarW = totalInc>0 && v>0 ? Math.min((v/totalInc)*100*3, 60) : 0;
+      const p = pct(v, totalInc);
+      const pctDisplay = v !== 0 ? `<span class="pct-bar" style="width:${pctBarW}px"></span>${p}` : (vis && item.type!=='section' && totalInc>0 ? '0.00%' : '');
+
+      switch(item.type){
+        case 'section':
+          html+=`<tr class="pl-section"><td>${item.label}</td><td class="r"></td><td class="pct-cell"></td></tr>`;
+          break;
+        case 'category':
+          html+=`<tr class="pl-cat${isExp?' expanded':''}" onclick="toggle('${item.id}')" style="${disp}">
+            <td style="padding-left:${ind+20}px">${icon} ${item.label}</td>
+            <td class="r">${v?money(v):''}</td>
+            <td class="pct-cell">${v?pctDisplay:''}</td></tr>`;
+          break;
+        case 'line':
+          html+=`<tr class="pl-line" style="${disp}">
+            <td style="padding-left:${ind+20}px">${item.label}</td>
+            <td class="r">${v?money(v):''}</td>
+            <td class="pct-cell">${v?pctDisplay:''}</td></tr>`;
+          break;
+        case 'subtotal':
+          html+=`<tr class="pl-subtotal" style="${disp}">
+            <td style="padding-left:${ind+20}px">${item.label}</td>
+            <td class="r">${money(v)}</td>
+            <td class="pct-cell">${pctDisplay}</td></tr>`;
+          break;
+        case 'total':
+          html+=`<tr class="pl-total">
+            <td>${item.label}</td>
+            <td class="r">${money(v)}</td>
+            <td class="pct-cell">${pctDisplay}</td></tr>`;
+          break;
+        case 'summary':
+          const cls=v>=0?'positive':'negative';
+          html+=`<tr class="pl-summary ${cls}${item.final?' final':''}">
+            <td><strong>${item.label}</strong></td>
+            <td class="r" style="color:${v>=0?'var(--green)':'var(--red)'}"><strong>${money(v)}</strong></td>
+            <td class="pct-cell" style="color:${v>=0?'var(--green)':'var(--red)'}"><strong>${pct(v,totalInc)}</strong></td></tr>`;
+          break;
+      }
+    }
+  });
+  body.innerHTML = html;
+}
+
+// ── Toggle ──
+function toggle(id){
+  if(expanded.has(id)){
+    expanded.delete(id);
+    ITEMS.forEach(i=>{ if(i.parent===id && i.type==='category') collapseDeep(i.id); });
+  } else { expanded.add(id); }
+  renderAll();
+}
+function collapseDeep(id){ expanded.delete(id); ITEMS.forEach(i=>{ if(i.parent===id && i.type==='category') collapseDeep(i.id); }); }
+function expandAll(){ ITEMS.forEach(i=>{ if(i.type==='category') expanded.add(i.id); }); renderAll(); }
+function collapseAll(){ expanded.clear(); renderAll(); }
+
+function printPL(){
+  expandAll();
+  setTimeout(()=>{
+    const table = document.querySelector('table.pl');
+    if(!table) return;
+    const co   = document.getElementById('hdr-co').textContent;
+    const date = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+    const clone = table.cloneNode(true);
+    clone.querySelectorAll('.toggle-btn,.pct-bar,.pct-cell,.expand-all-btn').forEach(el=>el.remove());
+    clone.querySelectorAll('tr[style*="display:none"]').forEach(tr=>tr.style.display='');
+    const win = window.open('','_blank','width=1000,height=700');
+    win.document.write(`<!DOCTYPE html><html><head>
+<title>${co} P&L</title>
+<style>
+@page{size:A4 landscape;margin:1.2cm 1.5cm;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;font-size:8.5pt;color:#0F172A;}
+.pt{font-size:13pt;font-weight:700;margin-bottom:3px;}
+.ps{font-size:8pt;color:#64748B;margin-bottom:12px;}
+table{width:100%;border-collapse:collapse;}
+th{padding:5px 10px;text-align:left;font-size:7pt;letter-spacing:.08em;text-transform:uppercase;color:#64748B;font-weight:600;background:#F8FAFC;border-bottom:1.5px solid #CBD5E1;white-space:nowrap;}
+th.r{text-align:right;}
+td{padding:3px 10px;border-bottom:1px solid #F1F4F9;font-size:8pt;white-space:nowrap;}
+td.r{text-align:right;font-variant-numeric:tabular-nums;}
+tr.pl-section td{background:#1E293B;color:#fff;font-size:7pt;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:5px 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+tr:nth-child(even):not(.pl-section) td{background:#FAFBFC;}
+</style>
+</head><body>
+<div class="pt">${co} — Profit &amp; Loss Statement</div>
+<div class="ps">Printed ${date}</div>
+${clone.outerHTML}
+</body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(()=>win.print(), 400);
+  }, 200);
+}
+
+// ── KPIs ──
+function fmt(n){ return (n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}); }
+function updateKPIs(c){
+  const ti=c.t_inc;
+  document.getElementById('k-income').textContent=fmt(ti);
+  document.getElementById('k-exp').textContent=fmt(c.t_exp);
+  document.getElementById('k-exp-pct').textContent=pct(c.t_exp,ti)+' of income';
+  document.getElementById('k-ni').textContent=fmt(c.ni);
+  document.getElementById('k-ni').className='kpi-val '+(c.ni>=0?'pos-val':'neg-val');
+  document.getElementById('k-ni-pct').textContent=pct(c.ni,ti)+' of income';
+  const margin = ti ? (c.ni/ti*100) : 0;
+  const mEl = document.getElementById('k-margin');
+  mEl.textContent = (ti ? margin.toFixed(1) : '0') + '%';
+  mEl.className='kpi-val '+(margin>=0?'pos-val':'neg-val');
+}
+
+// ── Charts ──
+function destroyChart(k){ if(charts[k]){charts[k].destroy();delete charts[k];} }
+
+function updateCharts(c){
+  // Monthly trend (yearly mode only, multi-period)
+  const trendCard = document.getElementById('trend-card');
+  if(period==='yearly' && isMultiPeriod){
+    trendCard.style.display='block';
+    destroyChart('trend');
+    const incArr = MONTHS.map(m =>
+      INC_IDS.reduce((s,id)=>{ const d=vals[id]; return s+(d?d[m]||0:0); }, 0)
+    );
+    const niArr = MONTHS.map(m => {
+      const tmp_period=period,tmp_m=selM;
+      // compute net income for each month inline
+      const save = period;
+      period='monthly';
+      selM=m;
+      const cx=compute();
+      period=save;
+      return cx.ni;
+    });
+    charts['trend'] = new Chart(document.getElementById('ch-trend'),{
+      type:'line',
+      data:{
+        labels:MONTH_LABELS,
+        datasets:[
+          {label:'Total Income',data:incArr,borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,.08)',fill:true,tension:.35,pointRadius:3,pointHoverRadius:5,borderWidth:2},
+          {label:'Net Cash Flow', data:niArr, borderColor:'#059669',backgroundColor:'rgba(5,150,105,.05)',fill:true,tension:.35,pointRadius:3,pointHoverRadius:5,borderWidth:2,borderDash:[4,3]},
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:true,position:'top',labels:{font:{size:11,family:'Inter'},color:'#64748B',padding:16,boxWidth:10,boxHeight:2}},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${money(ctx.parsed.y)}`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:10,family:'Inter'},color:'#94A3B8'}},
+          y:{grid:{color:'#F1F4F9'},ticks:{font:{size:10,family:'Inter'},color:'#94A3B8',callback:v=>v>=1000000?'$'+(v/1e6).toFixed(1)+'M':v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+v}}
+        }
+      }
+    });
+  } else {
+    trendCard.style.display='none';
+    destroyChart('trend');
+  }
+
+  // Shared expense-category list (largest first)
+  const CAT_PALETTE=['#6366F1','#F59E0B','#2563EB','#7C3AED','#059669','#DC2626','#0891B2','#DB2777','#65A30D','#64748B'];
+  const expCatsAll=[
+    {l:'Owner Distribution',      v:getVal('e_owner')},
+    {l:'Salaries & wages',        v:getVal('e_wages')},
+    {l:'Events / contractors',    v:getVal('e_events')},
+    {l:'Payroll taxes',          v:getVal('e_ptax')},
+    {l:'Health insurance',       v:getVal('e_health')},
+    {l:'Vehicle loan',           v:getVal('e_veh')},
+    {l:'Accounting & tax prep',  v:getVal('e_acct')},
+    {l:'Payroll fees',           v:getVal('e_pfees')},
+    {l:'Software',               v:getVal('e_soft')},
+  ].filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+
+  // Expense composition donut (top 7 + Other)
+  destroyChart('rev');
+  const donutCats = expCatsAll.length>8
+    ? [...expCatsAll.slice(0,7), {l:'Other', v:expCatsAll.slice(7).reduce((s,x)=>s+x.v,0)}]
+    : expCatsAll;
+  const revTotal=donutCats.reduce((s,x)=>s+x.v,0);
+  charts['rev']=new Chart(document.getElementById('ch-rev'),{
+    type:'doughnut',
+    data:{labels:donutCats.map(x=>x.l),
+      datasets:[{data:donutCats.map(x=>x.v),backgroundColor:CAT_PALETTE,borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{
+        legend:{display:true,position:'bottom',labels:{font:{size:10,family:'Inter'},color:'#64748B',padding:9,boxWidth:8,boxHeight:8}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${money(ctx.parsed)}`}},
+        datalabels:{
+          formatter:(v)=>revTotal>0&&(v/revTotal*100)>=4?(v/revTotal*100).toFixed(0)+'%':'',
+          font:{size:10,family:'Inter',weight:'600'},
+          color:'#fff'
+        }
+      }
+    },
+    plugins:[ChartDataLabels]
+  });
+
+  // Expense bar (top 10)
+  destroyChart('exp');
+  const expCats=expCatsAll.slice(0,10);
+  const expTotal=expCatsAll.reduce((s,x)=>s+x.v,0);
+  charts['exp']=new Chart(document.getElementById('ch-exp'),{
+    type:'bar',
+    data:{labels:expCats.map(x=>x.l),
+      datasets:[{data:expCats.map(x=>x.v),backgroundColor:'#3B82F688',borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      layout:{padding:{right:48}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>` ${money(ctx.parsed.x)}`}},
+        datalabels:{
+          anchor:'end',align:'right',
+          formatter:(v)=>expTotal>0?(v/expTotal*100).toFixed(1)+'%':'',
+          font:{size:10,family:'Inter',weight:'600'},
+          color:'#475569'
+        }
+      },
+      scales:{
+        x:{grid:{color:'#F1F4F9'},ticks:{font:{size:10,family:'Inter'},color:'#94A3B8',callback:v=>v>=1000000?'$'+(v/1e6).toFixed(1)+'M':v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+v}},
+        y:{grid:{display:false},ticks:{font:{size:11,family:'Inter'},color:'#475569'}}
+      }
+    },
+    plugins:[ChartDataLabels]
+  });
+}
+
+// ── CSV Upload ──
+function loadCSV(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const text=ev.target.result;
+    const result=parseCSV(text);
+    const count=Object.keys(result.vals).length;
+    if(count===0){alert('No matching line items found. Check the format guide below.');return;}
+    vals=result.vals;
+    isMultiPeriod=result.isMulti;
+    if(!isMultiPeriod){ period='yearly'; }
+    document.getElementById('csv-msg').innerHTML=`<strong>${count} line items</strong> loaded from <strong>${file.name}</strong>${isMultiPeriod?' — monthly data detected, all period filters enabled.':' — yearly totals only.'} `;
+    document.getElementById('csv-banner').style.display='flex';
+    renderPeriodUI();
+    renderAll();
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+// ── CSV Parser ──
+// Supports:
+//   Multi-period: Label, Jan [2025], Feb [2025], ..., Dec [2025], [Total]
+//   Simple:       Label, Amount  (or any 2-col, takes first numeric value)
+const MONTH_DETECT = {
+  jan:0,january:0,feb:1,february:1,mar:2,march:2,apr:3,april:3,
+  may:4,jun:5,june:5,jul:6,july:6,aug:7,august:7,
+  sep:8,september:8,oct:9,october:9,nov:10,november:10,dec:11,december:11
+};
+
+function parseCSV(text){
+  const lines=text.split(/\r?\n/);
+  let monthColMap=null; // col index → month key
+  const result={};
+
+  // First pass: find header row with month names
+  for(let i=0;i<Math.min(10,lines.length);i++){
+    const cols=parseLine(lines[i]);
+    const map={};
+    cols.forEach((c,idx)=>{
+      const lc=c.replace(/^"|"$/g,'').trim().toLowerCase().replace(/\s+\d{4}$/,''); // strip year
+      if(MONTH_DETECT[lc]!==undefined) map[idx]=MONTHS[MONTH_DETECT[lc]];
+    });
+    if(Object.keys(map).length>=3){ monthColMap=map; break; }
+  }
+
+  const isMulti=monthColMap!==null;
+
+  lines.forEach(line=>{
+    const cols=parseLine(line);
+    if(cols.length<2) return;
+    const label=cols[0].replace(/^"|"$/g,'').trim().toLowerCase();
+    if(!label) return;
+
+    ITEMS.forEach(item=>{
+      if(!item.csv) return;
+      if(!item.csv.some(k=>k===label)) return;
+
+      if(isMulti && monthColMap){
+        const d={};
+        Object.entries(monthColMap).forEach(([colIdx,mKey])=>{
+          const raw=(cols[colIdx]||'').replace(/^"|"$/g,'').replace(/[$,%() ]/g,'').replace(/,/g,'').trim();
+          const n=parseFloat(raw);
+          if(!isNaN(n)) d[mKey]=Math.abs(n);
+        });
+        if(Object.keys(d).length>0) result[item.id]=d;
+      } else {
+        let amount=0;
+        for(let i=1;i<cols.length;i++){
+          const raw=cols[i].replace(/^"|"$/g,'').replace(/[$,%()]/g,'').replace(/,/g,'').trim();
+          const n=parseFloat(raw);
+          if(!isNaN(n)&&n!==0){amount=Math.abs(n);break;}
+        }
+        if(amount) result[item.id]={all:amount};
+      }
+    });
+  });
+
+  return {vals:result, isMulti};
+}
+
+function parseLine(line){
+  const r=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'){inQ=!inQ;}
+    else if(line[i]===',' && !inQ){r.push(cur);cur='';}
+    else cur+=line[i];
+  }
+  r.push(cur); return r;
+}
+
+function resetData(){ vals={}; isMultiPeriod=false; period='yearly'; document.getElementById('csv-banner').style.display='none'; renderPeriodUI(); renderAll(); }
+
+// ── CSV Template (monthly) ──
+function dlTemplate(){
+  const lineIds=[...INC_IDS, ...RS_EXP_IDS];
+
+  const header='Label,Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec';
+  const rows=[header];
+  lineIds.forEach(id=>{
+    const item=ITEMS.find(i=>i.id===id);
+    if(!item||!item.csv) return;
+    rows.push(`${item.label},${MONTHS.map(()=>'0').join(',')}`);
+  });
+  const blob=new Blob([rows.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${co}_pl_monthly_template.csv`;
+  a.click();
+}
+
+// ── Download Excel (.xlsx) ──
+// Mirrors whatever period view is currently active (single Total/%,
+// Quarterly 3-month, or Yearly per-populated-month), always includes
+// every row (ignores expand/collapse state), writes real numbers (not
+// formatted strings), and styles it to match the on-screen/print P&L:
+// navy section bars, bold bordered totals, green/red Net Income, $ format.
+function exportExcel(){
+  const qMulti = (period==='quarterly' && isMultiPeriod);
+  const yMulti = (period==='yearly' && isMultiPeriod);
+  const multiMonths = qMulti ? QMAP[selQ] : (yMulti ? getPopulatedMonths() : null);
+  const isMulti = !!multiMonths;
+  const totalLabel = qMulti ? 'Q Total' : 'YTD Total';
+  const numCols = isMulti ? multiMonths.length + 2 : 3;
+
+  const monthData = isMulti ? multiMonths.map(m => computeForMonth(m)) : null;
+  const c = compute();
+  const totalInc = c.t_inc;
+
+  const aoa = [];
+  const rowMeta = [];
+
+  aoa.push([`${COS[co].name} — Profit & Loss Statement`, ...Array(numCols-1).fill('')]);
+  rowMeta.push({kind:'title'});
+  aoa.push([`Generated ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}`, ...Array(numCols-1).fill('')]);
+  rowMeta.push({kind:'subtitle'});
+  aoa.push([]);
+  rowMeta.push({kind:'blank'});
+
+  if(isMulti){
+    aoa.push(['Category', ...multiMonths.map(m=>MONTH_LABELS[MONTHS.indexOf(m)]), totalLabel]);
+  } else {
+    aoa.push(['Category', 'Total', '% of Income']);
+  }
+  rowMeta.push({kind:'header'});
+
+  const idToRow = {};
+  ITEMS.forEach(item=>{
+    if(item.type==='section'){
+      aoa.push([item.label.toUpperCase(), ...Array(numCols-1).fill('')]);
+      rowMeta.push({kind:'section'});
+      return;
+    }
+    idToRow[item.id] = aoa.length;
+    let v, row;
+    if(isMulti){
+      const mvs = monthData.map(md => md[item.id] !== undefined ? md[item.id] : 0);
+      const rowTotal = mvs.reduce((s,x)=>s+x,0);
+      v = rowTotal;
+      row = [item.label, ...mvs, rowTotal];
+    } else {
+      v = c[item.id] !== undefined ? c[item.id] : getVal(item.id);
+      row = [item.label, v, totalInc ? v/totalInc : 0];
+    }
+    aoa.push(row);
+    rowMeta.push({kind:item.type, level:item.level, positive: v>=0, final: !!item.final, id:item.id, kids:item.kids, formula:item.formula});
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:40}, ...Array(numCols-1).fill({wch:14})];
+
+  // ── Style palette — matches the on-screen/print P&L exactly ──
+  const TEXT='0F172A', TEXT2='475569', WHITE='FFFFFF';
+  const BORDER='CBD5E1', BORDER2='94A3B8';
+  const SECTION_BG='0F172A', SUBTOTAL_BG='F4F6FA', TOTAL_BG='EEF0F5', HEADER_BG='F8FAFC';
+  const POS_BG='ECFDF5', NEG_BG='FEF2F2', GREEN='059669', RED='DC2626';
+  const moneyFmt = '$#,##0.00;[Red]-$#,##0.00';
+  const pctFmt = '0.00%';
+  const thin = {style:'thin', color:{rgb:BORDER}};
+  const medium = {style:'medium', color:{rgb:BORDER2}};
+  const double = {style:'double', color:{rgb:BORDER2}};
+
+  function ref(r,cIdx){ return XLSX.utils.encode_cell({r, c:cIdx}); }
+  function ensure(r,cIdx){
+    const k = ref(r,cIdx);
+    if(!ws[k]) ws[k] = {t:'s', v:''};
+    return k;
+  }
+  function styleRow(r, style){
+    for(let cIdx=0; cIdx<numCols; cIdx++){
+      const k = ensure(r,cIdx);
+      ws[k].s = Object.assign({}, ws[k].s, style);
+    }
+  }
+
+  rowMeta.forEach((meta, r) => {
+    if(meta.kind==='title'){
+      styleRow(r, {font:{bold:true, sz:14, color:{rgb:TEXT}}});
+    } else if(meta.kind==='subtitle'){
+      styleRow(r, {font:{italic:true, sz:10, color:{rgb:TEXT2}}});
+    } else if(meta.kind==='header'){
+      styleRow(r, {font:{bold:true, sz:10, color:{rgb:TEXT2}}, fill:{patternType:'solid', fgColor:{rgb:HEADER_BG}}, border:{bottom:medium}, alignment:{horizontal:'right'}});
+      ws[ref(r,0)].s.alignment = {horizontal:'left'};
+    } else if(meta.kind==='section'){
+      styleRow(r, {font:{bold:true, sz:10, color:{rgb:WHITE}}, fill:{patternType:'solid', fgColor:{rgb:SECTION_BG}}});
+    } else if(meta.kind==='category'){
+      styleRow(r, {font:{bold:true, sz:10, color:{rgb:TEXT}}});
+      ws[ref(r,0)].s.alignment = {indent: meta.level};
+    } else if(meta.kind==='line'){
+      styleRow(r, {font:{sz:10, color:{rgb:TEXT2}}});
+      ws[ref(r,0)].s.alignment = {indent: meta.level};
+    } else if(meta.kind==='subtotal'){
+      styleRow(r, {font:{bold:true, sz:10, color:{rgb:TEXT}}, fill:{patternType:'solid', fgColor:{rgb:SUBTOTAL_BG}}, border:{top:thin, bottom:thin}});
+      ws[ref(r,0)].s.alignment = {indent: meta.level};
+    } else if(meta.kind==='total'){
+      styleRow(r, {font:{bold:true, sz:10, color:{rgb:TEXT}}, fill:{patternType:'solid', fgColor:{rgb:TOTAL_BG}}, border:{top:medium, bottom:medium}});
+    } else if(meta.kind==='summary'){
+      const bg = meta.positive ? POS_BG : NEG_BG;
+      const fc = meta.positive ? GREEN : RED;
+      styleRow(r, {font:{bold:true, sz: meta.final?12:10, color:{rgb:fc}}, fill:{patternType:'solid', fgColor:{rgb:bg}}, border: meta.final ? {top:double} : {top:thin}});
+    }
+
+    if(!['title','subtitle','blank','header','section'].includes(meta.kind)){
+      for(let cIdx=1; cIdx<numCols; cIdx++){
+        const k = ref(r,cIdx);
+        if(ws[k]) ws[k].z = (!isMulti && cIdx===2) ? pctFmt : moneyFmt;
+      }
+    }
+  });
+
+  // ── Live formulas — so subtotal/total/Net Income/% cells recalc when you
+  // edit a line-item number, instead of staying frozen at the export-time value.
+  function colLetter(cIdx){ return String.fromCharCode(65+cIdx); }
+  // No COGS/Gross-Profit line here: 'gp' rows == Total Income, so the 'gp' formula
+  // branch below is inert and 'ni' (Net Cash Flow) = Total Income − Total Expenses.
+  const incRow = idToRow['t_inc'], cogsRow = idToRow['t_inc'], gpRow = idToRow['t_inc'], expRow = idToRow['t_exp'];
+
+  if(isMulti){
+    const totalCol = numCols-1;
+    rowMeta.forEach((meta,r) => {
+      if(!meta.id) return;
+      for(let cIdx=1; cIdx<totalCol; cIdx++){
+        const col = colLetter(cIdx);
+        const k = ref(r,cIdx);
+        if(!ws[k]) continue;
+        if(meta.kids){
+          ws[k].f = `SUM(${meta.kids.map(kid=>col+(idToRow[kid]+1)).join(',')})`;
+        } else if(meta.formula==='gp'){
+          ws[k].f = `${col}${incRow+1}-${col}${cogsRow+1}`;
+        } else if(meta.formula==='ni'){
+          ws[k].f = `${col}${gpRow+1}-${col}${expRow+1}`;
+        }
+      }
+      // Row's own Total column = sum across that row's month columns
+      const firstCol = colLetter(1), lastCol = colLetter(totalCol-1);
+      const kTotal = ref(r, totalCol);
+      if(ws[kTotal]) ws[kTotal].f = `SUM(${firstCol}${r+1}:${lastCol}${r+1})`;
+    });
+  } else {
+    rowMeta.forEach((meta,r) => {
+      if(!meta.id) return;
+      const kVal = ref(r,1);
+      if(ws[kVal]){
+        if(meta.kids){
+          ws[kVal].f = `SUM(${meta.kids.map(kid=>'B'+(idToRow[kid]+1)).join(',')})`;
+        } else if(meta.formula==='gp'){
+          ws[kVal].f = `B${incRow+1}-B${cogsRow+1}`;
+        } else if(meta.formula==='ni'){
+          ws[kVal].f = `B${gpRow+1}-B${expRow+1}`;
+        }
+      }
+      // % of Income = live formula off this row's own value + Total Income
+      const kPct = ref(r,2);
+      if(ws[kPct]) ws[kPct].f = `IF(B${incRow+1}=0,0,B${r+1}/B${incRow+1})`;
+    });
+  }
+
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:numCols-1}},
+    {s:{r:1,c:0}, e:{r:1,c:numCols-1}},
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'P&L');
+
+  const periodSlug = period==='yearly' ? 'yearly' : period==='quarterly' ? selQ : selM;
+  const dateStr = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `${co}_pl_${periodSlug}_${dateStr}.xlsx`);
+}
+
+// ── Init ──
+async function init(){
+  const p=new URLSearchParams(window.location.search);
+  co=p.get('co')||'konfide';
+  if(!COS[co]) co='konfide';
+  const cfg=COS[co];
+  document.title=cfg.name+' P&L — Konfide Capital';
+  document.getElementById('hdr-co').textContent=cfg.name;
+  document.getElementById('print-title').textContent=cfg.name+' — P&L Statement';
+  document.getElementById('print-date').textContent='Printed '+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('co-icon').textContent=cfg.icon;
+  document.getElementById('co-icon').style.background=cfg.accent+'22';
+  document.getElementById('co-h1').textContent=cfg.name;
+  renderPeriodUI();
+  renderAll();
+
+  // Auto-load from Google Sheet
+  if(cfg.sheetUrl){
+    try{
+      const resp = await fetch(cfg.sheetUrl);
+      const text = await resp.text();
+      const result = parseCSV(text);
+      const count = Object.keys(result.vals).length;
+      if(count>0){
+        vals=result.vals;
+        isMultiPeriod=result.isMulti;
+        document.getElementById('csv-msg').innerHTML=`<strong>${count} line items</strong> loaded automatically from Google Sheets.`;
+        document.getElementById('csv-banner').style.display='flex';
+        renderPeriodUI();
+        renderAll();
+      }
+    }catch(e){
+      console.warn('Could not auto-load sheet:',e);
+    }
+  }
+}
+
+if(sessionStorage.getItem('kc_auth')==='1') init();
+</script>
+</body>
+</html>
