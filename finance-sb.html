@@ -423,7 +423,8 @@ const ITEMS = [
   {id:'ofc_sup',   type:'line',     label:'Office supplies',                       level:2, parent:'c_office', csv:['office supplies']},
   {id:'shipping',  type:'line',     label:'Shipping & postage',                    level:2, parent:'c_office', csv:['shipping & postage']},
   {id:'software',  type:'line',     label:'Software & apps',                       level:2, parent:'c_office', csv:['software & apps']},
-  {id:'t_office',  type:'subtotal', label:'Total for Office expenses',             level:1, parent:'c_office', kids:['merchant','ofc_sup','shipping','software']},
+  {id:'equip_lease', type:'line',   label:'Equipment Lease',                       level:2, parent:'c_office', csv:['equipment lease','equipment (copy) lease']},
+  {id:'t_office',  type:'subtotal', label:'Total for Office expenses',             level:1, parent:'c_office', kids:['merchant','ofc_sup','shipping','software','equip_lease']},
 
   {id:'c_pay',     type:'category', label:'Payroll expenses',                      level:1, parent:null},
   {id:'payroll',   type:'line',     label:'ADP Fee',                               level:2, parent:'c_pay', csv:['adp fee','payroll expenses']},
@@ -467,7 +468,7 @@ const ITEMS = [
   {id:'t_exp',     type:'total',    label:'Total for Expenses',                    level:0,
     kids:['advert','biz_lic','charity','retire','health','wcomp','entertain','bankfees','cont_ed','member','stf_bonus',
           'bizins','westbend','loan_int','cc_int','kei','kmgmt','legalfee','nurse','stf_cert','meals',
-          'merchant','ofc_sup','shipping','software','payroll','salaries','rent',
+          'merchant','ofc_sup','shipping','software','equip_lease','payroll','salaries','rent',
           'cleaning','hvac','inspect','landscap','orkin','parts','snowplow',
           'sup_base','amazon','sup_mat','taxes','travel','util_base','waste','electric','internet','water',
           'veh_exp','veh_gas']},
@@ -516,7 +517,7 @@ function compute(){
   const exp_ids  = ['advert','biz_lic','charity','retire','health','wcomp','entertain',
                     'bankfees','cont_ed','member','stf_bonus','bizins','westbend',
                     'loan_int','cc_int','kei','kmgmt','legalfee','nurse','stf_cert','meals',
-                    'merchant','ofc_sup','shipping','software','payroll','salaries','rent',
+                    'merchant','ofc_sup','shipping','software','equip_lease','payroll','salaries','rent',
                     'cleaning','hvac','inspect','landscap','orkin','parts','snowplow',
                     'sup_base','amazon','sup_mat','taxes','travel',
                     'util_base','waste','electric','internet','water',
@@ -532,7 +533,7 @@ function compute(){
   v.t_ins    = v.t_bizins;
   v.t_int    = sum(['loan_int','cc_int']);
   v.t_legal  = sum(['kei','kmgmt','legalfee','nurse','stf_cert']);
-  v.t_office = sum(['merchant','ofc_sup','shipping','software']);
+  v.t_office = sum(['merchant','ofc_sup','shipping','software','equip_lease']);
   v.t_pay    = sum(['payroll','salaries','taxes']);
   v.t_rep    = sum(['cleaning','hvac','inspect','landscap','orkin','parts','snowplow']);
   v.t_sup    = sum(['sup_base','amazon','sup_mat']);
@@ -1031,7 +1032,7 @@ function dlTemplate(){
   const lineIds=['grants','ccap','daycare','tuition','advert','biz_lic','charity',
     'retire','health','wcomp','entertain','bankfees','cont_ed','member','stf_bonus',
     'bizins','westbend','loan_int','cc_int','kei','kmgmt','legalfee','nurse','stf_cert',
-    'meals','merchant','ofc_sup','shipping','software','payroll','salaries','rent',
+    'meals','merchant','ofc_sup','shipping','software','equip_lease','payroll','salaries','rent',
     'cleaning','hvac','inspect','landscap','orkin','parts','snowplow',
     'sup_base','amazon','sup_mat','taxes','travel',
     'util_base','waste','electric','internet','water','veh_exp','veh_gas'];
