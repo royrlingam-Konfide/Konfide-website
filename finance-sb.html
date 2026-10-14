@@ -384,8 +384,9 @@ const ITEMS = [
   {id:'c_emp',     type:'category', label:'Employee benefits',                     level:1, parent:null},
   {id:'retire',    type:'line',     label:'Employee retirement plans',             level:2, parent:'c_emp', csv:['employee retirement plans']},
   {id:'health',    type:'line',     label:'Health insurance & accident plans',     level:2, parent:'c_emp', csv:['health insurance & accident plans']},
+  {id:'health2',   type:'line',     label:'Health Insurance',                      level:2, parent:'c_emp', csv:['health insurance']},
   {id:'wcomp',     type:'line',     label:"Workers' compensation insurance",       level:2, parent:'c_emp', csv:["workers' compensation insurance","workers compensation insurance"]},
-  {id:'t_emp',     type:'subtotal', label:'Total for Employee benefits',           level:1, parent:'c_emp', kids:['retire','health','wcomp']},
+  {id:'t_emp',     type:'subtotal', label:'Total for Employee benefits',           level:1, parent:'c_emp', kids:['retire','health','health2','wcomp']},
 
   {id:'entertain', type:'line',     label:'Entertainment',                         level:1, parent:null, csv:['entertainment']},
 
@@ -466,7 +467,7 @@ const ITEMS = [
   {id:'t_veh',     type:'subtotal', label:'Total for Vehicle expenses',            level:1, parent:'c_veh', kids:['veh_exp','veh_gas']},
 
   {id:'t_exp',     type:'total',    label:'Total for Expenses',                    level:0,
-    kids:['advert','biz_lic','charity','retire','health','wcomp','entertain','bankfees','cont_ed','member','stf_bonus',
+    kids:['advert','biz_lic','charity','retire','health','health2','wcomp','entertain','bankfees','cont_ed','member','stf_bonus',
           'bizins','westbend','loan_int','cc_int','kei','kmgmt','legalfee','nurse','stf_cert','meals',
           'merchant','ofc_sup','shipping','software','equip_lease','payroll','salaries','rent',
           'cleaning','hvac','inspect','landscap','orkin','parts','snowplow',
@@ -514,7 +515,7 @@ function sum(ids){ return ids.reduce((s,id) => s+getVal(id), 0); }
 
 function compute(){
   const inc_ids  = ['grants','ccap','daycare','tuition'];
-  const exp_ids  = ['advert','biz_lic','charity','retire','health','wcomp','entertain',
+  const exp_ids  = ['advert','biz_lic','charity','retire','health','health2','wcomp','entertain',
                     'bankfees','cont_ed','member','stf_bonus','bizins','westbend',
                     'loan_int','cc_int','kei','kmgmt','legalfee','nurse','stf_cert','meals',
                     'merchant','ofc_sup','shipping','software','equip_lease','payroll','salaries','rent',
@@ -527,7 +528,7 @@ function compute(){
   v.t_inc    = v.t_svc;
   v.cogs     = getVal('cogs');
   v.gp       = v.t_inc - v.cogs;
-  v.t_emp    = sum(['retire','health','wcomp']);
+  v.t_emp    = sum(['retire','health','health2','wcomp']);
   v.t_genbiz = sum(['bankfees','cont_ed','member','stf_bonus']);
   v.t_bizins = sum(['bizins','westbend']);
   v.t_ins    = v.t_bizins;
@@ -1030,7 +1031,7 @@ function resetData(){ vals={}; isMultiPeriod=false; period='yearly'; document.ge
 // ── CSV Template (monthly) ──
 function dlTemplate(){
   const lineIds=['grants','ccap','daycare','tuition','advert','biz_lic','charity',
-    'retire','health','wcomp','entertain','bankfees','cont_ed','member','stf_bonus',
+    'retire','health','health2','wcomp','entertain','bankfees','cont_ed','member','stf_bonus',
     'bizins','westbend','loan_int','cc_int','kei','kmgmt','legalfee','nurse','stf_cert',
     'meals','merchant','ofc_sup','shipping','software','equip_lease','payroll','salaries','rent',
     'cleaning','hvac','inspect','landscap','orkin','parts','snowplow',
