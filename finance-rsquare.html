@@ -319,7 +319,7 @@ code{background:#F1F4F9;border:1px solid var(--border);padding:1px 6px;border-ra
 
 <script>
 // ── Auth ──
-const PASS = 'Konfide2026!';
+const PASS = 'RLVault6192!';
 function auth(){
   if(document.getElementById('gate-in').value===PASS){
     sessionStorage.setItem('kc_auth','1');
@@ -371,6 +371,7 @@ const ITEMS = [
   {id:'repairs',   type:'line',     label:'Repairs & maintenance',               level:1, parent:null, csv:['repairs & maintenance']},
   {id:'sbaloan',   type:'line',     label:'SBA EIDL loan',                       level:1, parent:null, csv:['sba eidl loan']},
   {id:'software',  type:'line',     label:'Software & apps',                      level:1, parent:null, csv:['software & apps']},
+  {id:'supplies',  type:'line',     label:'Supplies',                            level:1, parent:null, csv:['supplies']},
   {id:'taxes',     type:'line',     label:'Taxes paid',                          level:1, parent:null, csv:['taxes paid']},
 
   {id:'c_rel',     type:'category', label:'Konfide related-party',                level:1, parent:null},
@@ -385,13 +386,13 @@ const ITEMS = [
   {id:'t_util',    type:'subtotal', label:'Total for Utilities',                  level:1, parent:'c_util', kids:['electric','hvac','internet']},
 
   {id:'t_exp',     type:'total',    label:'Total for Expenses',                   level:0,
-    kids:['advert','bankfees','coursemat','legal','merchant','ownerdraw','rent','repairs','sbaloan','software','taxes',
+    kids:['advert','bankfees','coursemat','legal','merchant','ownerdraw','rent','repairs','sbaloan','software','supplies','taxes',
           'kei','kmgmt','electric','hvac','internet']},
   {id:'ni',        type:'summary',  label:'Net Income',                           level:0, formula:'ni', final:true},
 ];
 
 // Every expense line id — the single source of truth for compute(), the template, and totals.
-const RS_EXP_IDS = ['advert','bankfees','coursemat','legal','merchant','ownerdraw','rent','repairs','sbaloan','software','taxes',
+const RS_EXP_IDS = ['advert','bankfees','coursemat','legal','merchant','ownerdraw','rent','repairs','sbaloan','software','supplies','taxes',
                     'kei','kmgmt','electric','hvac','internet'];
 
 // ── State ──
@@ -775,6 +776,7 @@ function updateCharts(c){
     {l:'Repairs & maintenance',  v:getVal('repairs')},
     {l:'Legal & professional',   v:getVal('legal')},
     {l:'Course materials',       v:getVal('coursemat')},
+    {l:'Supplies',               v:getVal('supplies')},
     {l:'Bank fees',              v:getVal('bankfees')},
     {l:'Taxes paid',             v:getVal('taxes')},
   ].filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
