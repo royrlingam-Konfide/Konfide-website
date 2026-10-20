@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Smart Beginnings Ogden/IL-59 — Full Jan–Aug 2026 P&L from Chase6820"""
+"""Smart Beginnings Ogden/IL-59 — Full Jan–Oct 2026 P&L from Chase6820
+(October is partial — statement pulled 10/20/2026, covers through 10/16.)"""
 
 import csv
 from collections import defaultdict
 
-MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug']
+MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct']
 pl   = {m: defaultdict(float) for m in MONTHS}
 unk  = []
 checks_flag = []
 zelle_flag  = []
 
-MO = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug'}
+MO = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct'}
 
 def mo(date_str):
     return MO.get(date_str.strip()[:2])
@@ -46,6 +47,11 @@ CHECK_MAP = {
     '1011': 'Rent',                      # $18,000 Aug — per Roy
     '1012': 'Business loan interest',    # $3,200 Aug — per Roy
     '1013': 'Rent',                      # $12,000 Aug — per Roy
+    '1014': 'Line of Credit',            # $2,400 Sep — per Roy
+    '1015': 'Rent',                      # $3,000 Sep — per Roy
+    '1100': 'Entertainment',             # $91.93 Sep — per Roy
+    '1023': 'Rent',                      # $3,600 Oct — per Roy
+    '1024': 'Line of Credit',            # $3,200 Oct — per Roy
 }
 
 # ── ZELLE NAME MAP ─────────────────────────────────────────────────────────────
@@ -64,6 +70,9 @@ ZELLE_MAP = {
     'STABLE':           'Entertainment',
     'LISETTE':          'Entertainment',
     'CATHY':            'Legal Fees',   # per Roy: legal & professional services
+    'MOBILE COCOS TACOS': 'Entertainment',   # per Roy
+    'YOVANA':           'Entertainment',     # per Roy
+    'MOM':              'Owner Draw',        # per Roy: owner's take
     'SMART BEGINNINGS AOA': None,               # skip — inter-entity
     'NICK LUNDEEN':     None,                   # skip — likely refund/personal
 }
@@ -119,6 +128,7 @@ def cat(d, a, tp, ck, m):
     elif 'ADP TAX'          in d:         add(m, 'Taxes paid', a); return
     elif 'ADP PAYROLL FEES' in d:         add(m, 'ADP Fee', a); return
     elif 'ADP PAY-BY-PAY'   in d:         add(m, "Workers' compensation insurance", a); return
+    elif 'IL DEPT OF REVEN' in d:         add(m, 'Taxes paid', a); return
 
     # ── INSURANCE ─────────────────────────────────────────────────────────────
     if 'WEST BEND' in d:                  add(m, 'West Bend', a); return
@@ -171,8 +181,10 @@ def cat(d, a, tp, ck, m):
     elif 'WHOLEFDS' in d or 'WHOLE FOODS' in d: add(m, 'Meals', a); return
     elif 'TST*' in d:                    add(m, 'Meals', a); return
     elif 'PARLORDOUGHNUTS' in d:         add(m, 'Meals', a); return
-    elif 'SAMS CLUB' in d:               add(m, 'Meals', a); return
+    elif 'SAMS CLUB' in d or 'SAMSCLUB' in d: add(m, 'Meals', a); return
     elif "MCALISTER'S" in d or 'MCALISTERS' in d: add(m, 'Meals', a); return
+    elif 'MARIANOS' in d:                add(m, 'Meals', a); return
+    elif 'DD/BR' in d:                   add(m, 'Meals', a); return
 
     # ── SUPPLIES ──────────────────────────────────────────────────────────────
     if   'WALMART' in d or 'WAL-MART' in d: add(m, 'Supplies & materials', a); return
@@ -190,7 +202,9 @@ def cat(d, a, tp, ck, m):
     elif 'MICHAELS' in d:                add(m, 'Supplies & materials', a); return
     elif 'HOBBYLOBBY' in d or 'HOBBY-LOBBY' in d or 'HOBBY LOBBY' in d: add(m, 'Supplies & materials', a); return
     elif 'DOLLAR GENERAL' in d:          add(m, 'Supplies & materials', a); return
+    elif 'LP CUSTOM' in d:               add(m, 'Supplies & materials', a); return
     elif 'UP \'N ADAM' in d or 'UP N ADAM' in d: add(m, 'Parts & Materials', a); return
+    elif 'ASSURANCE FIRE' in d:          add(m, 'Parts & Materials', a); return
 
     # ── AMAZON ────────────────────────────────────────────────────────────────
     if 'AMAZON' in d or 'AMZN' in d:    add(m, 'Amazon', a); return
@@ -202,6 +216,7 @@ def cat(d, a, tp, ck, m):
     elif 'COLOR POWDER' in d:            add(m, 'Entertainment', a); return
     elif 'KONA ICE' in d:                add(m, 'Entertainment', a); return
     elif 'SQ *TRAVELING WORLD' in d:     add(m, 'Entertainment', a); return
+    elif 'LAZULI PARTY' in d:            add(m, 'Entertainment', a); return
 
     # ── LANDSCAPING ───────────────────────────────────────────────────────────
     if 'LANDSCAPING' in d or 'ERIC LANDS' in d: add(m, 'Landscaping', a); return
@@ -263,7 +278,7 @@ def cat(d, a, tp, ck, m):
 
 # ── READ FILES ────────────────────────────────────────────────────────────────
 for fname in ['Chase6820_Activity_20260622.CSV', 'Chase6820_Activity_2026june.CSV',
-              'Chase6820_Activity_20260917.csv']:
+              'Chase6820_Activity_20260917.csv', 'Chase6820_Activity_20261020.csv']:
     with open(fname, newline='', encoding='utf-8-sig') as f:
         for row in csv.DictReader(f):
             m = mo(row['Posting Date'])
@@ -285,10 +300,11 @@ EXPENSE_CATS = [
     'Internet & TV services','Utilities','Disposal & waste fees','Orkin',
     'Software & apps','Entertainment','Landscaping','Legal Fees',
     'Business licenses','Advertising & marketing','Nurse visit',
+    'Line of Credit','Owner Draw',
 ]
 
 print("=" * 70)
-print("  SMART BEGINNINGS OGDEN / IL-59 — JAN–AUG 2026 P&L")
+print("  SMART BEGINNINGS OGDEN / IL-59 — JAN–OCT 2026 P&L  (Oct partial, thru 10/16)")
 print("=" * 70)
 
 months = MONTHS
