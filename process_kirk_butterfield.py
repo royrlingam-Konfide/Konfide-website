@@ -77,7 +77,7 @@ def cat(d, a, tp, ck, m, date):
 
     # ── SKIP (financing we can't see the underlying purchase detail of) ────
     if 'AMERICAN EXPRESS' in d:                   log_skip(m,date,a,tp,d,'Amex card payment, no purchase detail'); return
-    if 'INTUIT FINANCING' in d:                   log_skip(m,date,a,tp,d,'QB Capital loan repayment'); return
+    if 'INTUIT FINANCING' in d:                   add(m, 'Business loan interest', a); return   # QB Capital repayment, per Roy
     if 'SMALL BUSINESS' in d:                     log_skip(m,date,a,tp,d,'SBA-type loan repayment'); return
     if tp == 'LOAN_PMT':
         if 'CHASE CARD' in d:                     log_skip(m,date,a,tp,d,'credit-card payment, no purchase detail'); return
