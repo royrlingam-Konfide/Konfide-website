@@ -48,8 +48,11 @@ CHECK_MAP = {
 }
 
 def cat(d, a, tp, ck, m, date):
-    # ── SKIP (internal transfers — regardless of direction) ─────────────────
-    if tp == 'ACCT_XFER':                         log_skip(m,date,a,tp,d,'internal transfer between Konfide accounts'); return
+    # ── TRANSFERS ────────────────────────────────────────────────────────────
+    if tp == 'ACCT_XFER':
+        if 'TO CHK ...8754' in d:                 add(m, 'Owner Draw', a); return   # ...8754 = Roy's personal account, per Roy
+        if 'FROM CHK ...8754' in d:               log_skip(m,date,a,tp,d,"owner capital contribution (Roy's personal account)"); return
+        log_skip(m,date,a,tp,d,'internal transfer between Konfide accounts'); return
     if 'ACCTVERIFY' in d:                         log_skip(m,date,a,tp,d,'bank-verification micro-txn, nets to $0'); return
 
     # ── INCOME (positive) ──────────────────────────────────────────────────
@@ -270,7 +273,7 @@ EXPENSE_CATS = [
     'Salaries & wages','Taxes paid','Rent','Cleaning Service','Heating & Cooling',
     'Landscaping','Orkin','Parts & Materials','Amazon','Supplies & materials',
     'Utilities','Disposal & waste fees','Electricity','Internet & TV services',
-    'Water & sewer','Vehicle expenses','Equipment Lease',
+    'Water & sewer','Vehicle expenses','Equipment Lease','Owner Draw',
 ]
 
 print("=" * 100)
