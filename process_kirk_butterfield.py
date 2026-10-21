@@ -22,6 +22,9 @@ def mo(date_str):
 def add(m, cat, a):
     pl[m][cat] += abs(a)
 
+def add_net(m, cat, a):
+    pl[m][cat] += a   # preserves sign — inflow reduces, outflow increases
+
 # ── CHECK MAP (based on amount/date pattern analysis vs. existing kirk_butterfield_pl_2026.csv) ──
 CHECK_MAP = {
     '319': 'Staff Bonus',        # $200 Jan 12
@@ -52,7 +55,8 @@ def cat(d, a, tp, ck, m, date):
     if tp == 'ACCT_XFER':
         if 'TO CHK ...8754' in d:                 add(m, 'Owner Draw', a); return   # ...8754 = Roy's personal account, per Roy
         if 'FROM CHK ...8754' in d:               log_skip(m,date,a,tp,d,"owner capital contribution (Roy's personal account)"); return
-        log_skip(m,date,a,tp,d,'internal transfer between Konfide accounts'); return
+        if 'CHK ...7060' in d:                     log_skip(m,date,a,tp,d,"payroll account — same entity, excluded per Roy"); return
+        add_net(m, 'Inter-company Transfers', a); return   # net of all other Konfide-account transfers, per Roy
     if 'ACCTVERIFY' in d:                         log_skip(m,date,a,tp,d,'bank-verification micro-txn, nets to $0'); return
 
     # ── INCOME (positive) ──────────────────────────────────────────────────
@@ -275,6 +279,8 @@ EXPENSE_CATS = [
     'Utilities','Disposal & waste fees','Electricity','Internet & TV services',
     'Water & sewer','Vehicle expenses','Equipment Lease','Owner Draw',
 ]
+# Memo-only: shown in the P&L for reference but NOT summed into Net Income — per Roy.
+MEMO_CATS = ['Inter-company Transfers']
 
 print("=" * 100)
 print("  SMART BEGINNINGS OF KIRK & BUTTERFIELD — JAN–OCT 2026 P&L  (Oct partial, thru 10/09)")
@@ -316,6 +322,14 @@ print(f"\n  {'NET INCOME':<36}", end='')
 for i,e in zip(tot_inc, tot_exp): print(f'{i-e:>10,.0f}', end='')
 print()
 
+print("\nMEMO (not included in Net Income):")
+for c in MEMO_CATS:
+    row_vals = [pl[m].get(c,0) for m in months]
+    if any(row_vals):
+        print(f"  {c:<36}", end='')
+        for v in row_vals: print(f'{v:>10,.0f}', end='')
+        print()
+
 if checks_flag:
     print("\nCHECKS — need Roy's input:")
     for c in checks_flag: print(" ", c)
@@ -342,7 +356,7 @@ def write_csv(path, cats):
             w.writerow(row)
 
 out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kirk_butterfield_pl_2026.csv')
-write_csv(out_path, INCOME_CATS + EXPENSE_CATS)
+write_csv(out_path, INCOME_CATS + EXPENSE_CATS + MEMO_CATS)
 print(f"\n✓ Wrote {out_path} — ready to upload to Google Drive")
 
 skip_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kirk_butterfield_skipped_transactions.csv')
