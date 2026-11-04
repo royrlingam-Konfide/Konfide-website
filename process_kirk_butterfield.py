@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Smart Beginnings of Kirk & Butterfield — Jan–Oct 2026 P&L from Chase7052 (operating) + Chase7060 (payroll)
-(October is partial — statement pulled 10/14/2026, covers through 10/09.)"""
+(October statements pulled 11/04/2026, cover through 10/30.)"""
 
 import csv
 from collections import defaultdict
@@ -50,12 +50,18 @@ CHECK_MAP = {
     '355': 'Heating & Cooling',  # $4,190.00 Oct — repair heating & cooling, per Roy
 }
 
+# QB Capital payoffs funded by a new loan draw (refinance). The draw is skipped as financing, so the
+# payoff is skipped too — otherwise the P&L shows a loss the cash never had. Matched by ACH trace #.
+QB_REFI_PAYOFF_TRACES = {
+    '111000026295055', '111000026295020', '111000026295104',   # 10/30/2026: $5,000 + $9,611.01 + $15,433.71, refi'd by $30,800 draw on 10/28
+}
+
 def cat(d, a, tp, ck, m, date):
     # ── TRANSFERS ────────────────────────────────────────────────────────────
     if tp == 'ACCT_XFER':
         if 'TO CHK ...8754' in d:                 add(m, 'Owner Draw', a); return   # ...8754 = Roy's personal account, per Roy
         if 'FROM CHK ...8754' in d:               log_skip(m,date,a,tp,d,"owner capital contribution (Roy's personal account)"); return
-        if 'CHK ...7060' in d:                     log_skip(m,date,a,tp,d,"payroll account — same entity, excluded per Roy"); return
+        if 'CHK ...7060' in d or 'CHK ...7052' in d: log_skip(m,date,a,tp,d,"payroll account — same entity, excluded per Roy"); return
         add_net(m, 'Inter-company Transfers', a); return   # net of all other Konfide-account transfers, per Roy
     if 'ACCTVERIFY' in d:                         log_skip(m,date,a,tp,d,'bank-verification micro-txn, nets to $0'); return
 
@@ -84,8 +90,11 @@ def cat(d, a, tp, ck, m, date):
 
     # ── SKIP (financing we can't see the underlying purchase detail of) ────
     if 'AMERICAN EXPRESS' in d:                   log_skip(m,date,a,tp,d,'Amex card payment, no purchase detail'); return
-    if 'INTUIT FINANCING' in d:                   add(m, 'Business loan interest', a); return   # QB Capital repayment, per Roy
-    if 'SMALL BUSINESS' in d:                     log_skip(m,date,a,tp,d,'SBA-type loan repayment'); return
+    if 'INTUIT FINANCING' in d:
+        if any(t in d for t in QB_REFI_PAYOFF_TRACES):
+            log_skip(m,date,a,tp,d,'QB Capital refinance payoff, funded by WebBank/Intuit loan draw — excluded per Roy'); return
+        add(m, 'QB Capital', a); return   # QB Capital repayment, per Roy
+    if 'SMALL BUSINESS' in d:                     add(m, 'Chase loan', a); return   # per Roy
     if tp == 'LOAN_PMT':
         if 'CHASE CARD' in d:                     log_skip(m,date,a,tp,d,'credit-card payment, no purchase detail'); return
         if 'BRC' in d:                            log_skip(m,date,a,tp,d,'business line-of-credit payment'); return
@@ -107,10 +116,10 @@ def cat(d, a, tp, ck, m, date):
         add(m, 'Rent', a); return
 
     # ── LOAN (IDEA 247 recurring weekly note) ───────────────────────────────
-    if 'IDEA 247 INC' in d:                       add(m, 'Business loan interest', a); return
+    if 'IDEA 247 INC' in d:                       add(m, 'IDEA loan', a); return
 
     # ── LOAN (Headway Capital repayment — draws stay skipped, see above) ────
-    if 'HWCRCVBLS23' in d:                        add(m, 'Business loan interest', a); return
+    if 'HWCRCVBLS23' in d:                        add(m, 'Headway Capital', a); return
 
     # ── PAYROLL (Chase7060) ─────────────────────────────────────────────────
     if   'ADP WAGE PAY'     in d:                 add(m, 'Salaries & wages', a); return
@@ -179,6 +188,9 @@ def cat(d, a, tp, ck, m, date):
     elif 'TST*' in d:                              add(m, 'Meals', a); return
     elif 'SQ *BATAVIA CREAMERY' in d:              add(m, 'Meals', a); return
     elif 'AURORA FRESH MARKET' in d:               add(m, 'Meals', a); return
+    elif d.startswith('WALMART2000'):              add(m, 'Meals', a); return   # Walmart's newer descriptor format (Oct 2026+)
+    elif 'GFS STORE' in d:                         add(m, 'Meals', a); return   # Gordon Food Service
+    elif 'WOODMANS' in d:                          add(m, 'Meals', a); return
 
     # ── SUPPLIES ─────────────────────────────────────────────────────────────
     if   'LP CUSTOM TEES' in d:                    add(m, 'Supplies & materials', a); return
@@ -191,6 +203,7 @@ def cat(d, a, tp, ck, m, date):
     elif 'SUNGLASS HUT' in d:                       add(m, 'Supplies & materials', a); return
     elif 'UNTUCKIT' in d:                           add(m, 'Supplies & materials', a); return
     elif 'APPLE STORE' in d:                        add(m, 'Supplies & materials', a); return
+    elif 'PLAQUES PLUS' in d:                       add(m, 'Supplies & materials', a); return   # supplies, per Roy
 
     # ── AMAZON ───────────────────────────────────────────────────────────────
     if 'AMAZON' in d:                              add(m, 'Amazon', a); return
@@ -202,6 +215,7 @@ def cat(d, a, tp, ck, m, date):
     elif 'SPECIAL EVENTS' in d:                    add(m, 'Entertainment', a); return
     elif 'SQ *TRAVELING WORLD' in d:               add(m, 'Entertainment', a); return
     elif 'TENNIS BALLERZ' in d:                    add(m, 'Entertainment', a); return
+    elif 'MOBILE COCOS TACOS' in d:                add(m, 'Entertainment', a); return   # Zelle, food truck event, per Roy
 
     # ── REPAIRS / PARTS ──────────────────────────────────────────────────────
     if   "UP 'N ADAM" in d:                        add(m, 'Parts & Materials', a); return
@@ -210,6 +224,7 @@ def cat(d, a, tp, ck, m, date):
     elif 'ATOMIC FIRE PROT' in d:                  add(m, 'Parts & Materials', a); return
     elif 'BLACK GOLD SEPTIC' in d:                 add(m, 'Parts & Materials', a); return
     elif 'RELIABLE FIRE & SECUR' in d:             add(m, 'Parts & Materials', a); return
+    elif 'A&T ELECTRIC' in d:                      add(m, 'Parts & Materials', a); return   # electrical repair, per Roy
     elif 'ANTHONY PAINTER' in d:                   add(m, 'Parts & Materials', a); return   # Zelle, per name — painting
 
     # ── PEST CONTROL ─────────────────────────────────────────────────────────
@@ -251,20 +266,36 @@ def cat(d, a, tp, ck, m, date):
 
 # ── READ FILES ────────────────────────────────────────────────────────────────
 FILES_7052 = ['Chase7052_Activity_20260621.CSV', 'Chase7052_Activity_20260803.csv',
-              'Chase7052_Activity_20260910.csv', 'Chase7052_Activity_20261014.csv']
+              'Chase7052_Activity_20260910.csv', 'Chase7052_Activity_20261014.csv',
+              'Chase7052_Activity_20261104.csv']
 FILES_7060 = ['Chase7060_Activity_20260621.CSV', 'Chase7060_Activity_20260803.csv',
-              'Chase7060_Activity_20260910.csv', 'Chase7060_Activity_20261014.csv']
+              'Chase7060_Activity_20260910.csv', 'Chase7060_Activity_20261014.csv',
+              'Chase7060_Activity_20261104.csv']
 
-for fname in FILES_7052 + FILES_7060:
-    with open(fname, newline='', encoding='utf-8-sig') as f:
-        for row in csv.DictReader(f):
-            m = mo(row['Posting Date'])
-            if not m: continue
-            d  = row['Description'].upper()
-            a  = float(row['Amount'])
-            tp = row['Type'].strip()
-            ck = row.get('Check or Slip #','').strip()
-            cat(d, a, tp, ck, m, row['Posting Date'])
+# Statement pulls overlap (e.g. 10/14 and 11/04 both contain Oct 1–9). Skip rows already seen in an
+# earlier file of the same account. Running balance is part of the key, so genuine same-day
+# same-amount charges (e.g. two $89 Procare charges) stay distinct.
+dupes = 0
+for acct, files in (('7052', FILES_7052), ('7060', FILES_7060)):
+    seen = set()
+    for fname in files:
+        file_keys = set()
+        with open(fname, newline='', encoding='utf-8-sig') as f:
+            for row in csv.DictReader(f):
+                key = (row['Posting Date'], row['Description'], row['Amount'], row['Type'], row['Balance'],
+                       (row.get('Check or Slip #') or '').strip())
+                if key in seen:
+                    dupes += 1; continue
+                file_keys.add(key)
+                m = mo(row['Posting Date'])
+                if not m: continue
+                d  = row['Description'].upper()
+                a  = float(row['Amount'])
+                tp = row['Type'].strip()
+                ck = (row.get('Check or Slip #') or '').strip()
+                cat(d, a, tp, ck, m, row['Posting Date'])
+        seen |= file_keys
+print(f"(skipped {dupes} duplicate rows from overlapping statement pulls)")
 
 
 # ── REPORT ──────────────────────────────────────────────────────────────────
@@ -272,18 +303,19 @@ INCOME_CATS = ['Grants','CCAP','Daycare Resource','Tuition Express']
 EXPENSE_CATS = [
     'Advertising & marketing','Business licenses',
     'Health insurance & accident plans',"Workers' compensation insurance",'Employee retirement plans',
-    'Entertainment','Staff Bonus','West Bend','Business loan interest','Legal Fees',
+    'Entertainment','Staff Bonus','West Bend','QB Capital','Headway Capital','Legal Fees',
     'Nurse visit','Meals','Merchant account fees','Software & apps','ADP Fee',
     'Salaries & wages','Taxes paid','Rent','Cleaning Service','Heating & Cooling',
     'Landscaping','Orkin','Parts & Materials','Amazon','Supplies & materials',
     'Utilities','Disposal & waste fees','Electricity','Internet & TV services',
     'Water & sewer','Vehicle expenses','Equipment Lease','Owner Draw',
+    'Chase loan','IDEA loan',
 ]
 # Memo-only: shown in the P&L for reference but NOT summed into Net Income — per Roy.
 MEMO_CATS = ['Inter-company Transfers']
 
 print("=" * 100)
-print("  SMART BEGINNINGS OF KIRK & BUTTERFIELD — JAN–OCT 2026 P&L  (Oct partial, thru 10/09)")
+print("  SMART BEGINNINGS OF KIRK & BUTTERFIELD — JAN–OCT 2026 P&L  (Oct thru 10/30)")
 print("=" * 100)
 
 months = MONTHS
