@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Smart Beginnings Ogden/IL-59 — Full Jan–Oct 2026 P&L from Chase6820
-(October is partial — statement pulled 10/20/2026, covers through 10/16.)"""
+(October statement pulled 11/05/2026, covers through 10/30.)"""
 
 import csv
 from collections import defaultdict
@@ -52,6 +52,7 @@ CHECK_MAP = {
     '1100': 'Entertainment',             # $91.93 Sep — per Roy
     '1023': 'Rent',                      # $3,600 Oct — per Roy
     '1024': 'Line of Credit',            # $3,200 Oct — per Roy
+    '1021': 'Parts & Materials',         # $1,800 Oct — repair, per Roy
 }
 
 # ── ZELLE NAME MAP ─────────────────────────────────────────────────────────────
@@ -72,6 +73,7 @@ ZELLE_MAP = {
     'CATHY':            'Legal Fees',   # per Roy: legal & professional services
     'MOBILE COCOS TACOS': 'Entertainment',   # per Roy
     'YOVANA':           'Entertainment',     # per Roy
+    'LUIS':             'Parts & Materials', # Luis (Alexander Dee) painter — repair & maintenance, per Roy
     'MOM':              'Owner Draw',        # per Roy: owner's take
     'SMART BEGINNINGS AOA': None,               # skip — inter-entity
     'NICK LUNDEEN':     None,                   # skip — likely refund/personal
@@ -101,24 +103,38 @@ def cat(d, a, tp, ck, m):
         elif 'YWCA' in d:               add(m, 'Grants', a)
         elif 'ILLINOIS NETWORK' in d:   add(m, 'Grants', a)
         elif 'REMOTE ONLINE DEPOSIT' in d: add(m, 'Tuition Express', a)
+        elif 'ATM CASH DEPOSIT' in d:   add(m, 'Tuition Express', a)   # cash tuition, per Roy
+        elif 'VICTOR HUGO ROMERO' in d: add(m, 'Tuition Express', a)   # parent Zelle, per Roy
         elif 'REAL TIME TRANSFER' in d: pass   # $0.03/$0.05 test transfers, ignore
         # Refunds
         elif 'GFS STORE' in d:          pl[m]['Meals'] -= abs(a)
         elif 'AMAZON' in d or 'AMZN' in d: pl[m]['Amazon'] -= abs(a)
         elif 'PARLORDOUGHNUTS' in d or 'POTBELLY' in d: pl[m]['Meals'] -= abs(a)
         elif 'WALMART' in d or 'WAL-MART' in d: pl[m]['Supplies & materials'] -= abs(a)
+        elif 'MICHAELS' in d:           pl[m]['Supplies & materials'] -= abs(a)   # store refund
+        elif 'BRC ...' in d:            pass   # business line-of-credit draw (financing, not income)
+        elif tp == 'ACCT_XFER':         pass   # transfer between own accounts
+        elif 'WEBBANK/INTUIT' in d:     pass   # QB Capital loan draw (financing, not income)
+        else: unk.append(f'{m}  CREDIT ${a:>9,.2f}  {d[:70]}')   # never drop an inflow silently
         return
 
     a = abs(a)
 
     # ── SKIP ──────────────────────────────────────────────────────────────────
-    if tp in ('ACCT_XFER', 'LOAN_PMT'):  return
+    if tp == 'ACCT_XFER':                 return
     if 'AMERICAN EXPRESS' in d:           return
     if 'CHASE CREDIT CRD' in d:           return
-    if 'INTUIT FINANCING' in d:           return
     if 'APPLECARD GSBANK' in d:           return   # personal Apple Card
     if 'ILLINOIS SC ACH' in d:            return   # child support garnishment (already in payroll)
-    if 'WEBBANK/INTUIT' in d:             return   # QB Capital draws
+    if 'WEBBANK/INTUIT' in d:             return   # QB Capital draws (financing, not income)
+
+    # ── LOAN REPAYMENTS — none skipped, per Roy ─────────────────────────────────
+    if 'INTUIT FINANCING' in d:           add(m, 'QB Capital', a); return
+    if tp == 'LOAN_PMT':
+        if 'AUTO LOAN' in d:              add(m, 'Vehicle expenses', a); return
+        if 'BUS REV CRDT' in d or 'BRC' in d: add(m, 'Line of Credit', a); return
+        if 'CHASE CARD' in d:             add(m, 'Credit card interest', a); return
+        unk.append(f'{m}  LOAN_PMT ${a:>8,.2f}  {d[:70]}'); return
 
     # ── SBA EIDL LOAN ─────────────────────────────────────────────────────────
     if 'SBA EIDL LOAN' in d:             add(m, 'SBA EIDL loan', a); return
@@ -277,17 +293,30 @@ def cat(d, a, tp, ck, m):
 
 
 # ── READ FILES ────────────────────────────────────────────────────────────────
-for fname in ['Chase6820_Activity_20260622.CSV', 'Chase6820_Activity_2026june.CSV',
-              'Chase6820_Activity_20260917.csv', 'Chase6820_Activity_20261020.csv']:
+FILES_6820 = ['Chase6820_Activity_20260622.CSV', 'Chase6820_Activity_2026june.CSV',
+              'Chase6820_Activity_20260917.csv', 'Chase6820_Activity_20261020.csv',
+              'Chase6820_Activity_20261105.csv']
+# Statement pulls overlap (10/20 and 11/05 both contain Oct 1–16). Skip rows already seen in an earlier
+# file. Running balance is part of the key, so genuine same-day same-amount charges stay distinct.
+seen, dupes = set(), 0
+for fname in FILES_6820:
+    file_keys = set()
     with open(fname, newline='', encoding='utf-8-sig') as f:
         for row in csv.DictReader(f):
+            key = (row['Posting Date'], row['Description'], row['Amount'], row['Type'], row['Balance'],
+                   (row.get('Check or Slip #') or '').strip())
+            if key in seen:
+                dupes += 1; continue
+            file_keys.add(key)
             m = mo(row['Posting Date'])
             if not m: continue
             d  = row['Description'].upper()
             a  = float(row['Amount'])
             tp = row['Type'].strip()
-            ck = row.get('Check or Slip #','').strip()
+            ck = (row.get('Check or Slip #') or '').strip()
             cat(d, a, tp, ck, m)
+    seen |= file_keys
+print(f"(skipped {dupes} duplicate rows from overlapping statement pulls)")
 
 
 # ── REPORT ────────────────────────────────────────────────────────────────────
@@ -300,11 +329,11 @@ EXPENSE_CATS = [
     'Internet & TV services','Utilities','Disposal & waste fees','Orkin',
     'Software & apps','Entertainment','Landscaping','Legal Fees',
     'Business licenses','Advertising & marketing','Nurse visit',
-    'Line of Credit','Owner Draw',
+    'Line of Credit','Owner Draw','QB Capital','Credit card interest',
 ]
 
 print("=" * 70)
-print("  SMART BEGINNINGS OGDEN / IL-59 — JAN–OCT 2026 P&L  (Oct partial, thru 10/16)")
+print("  SMART BEGINNINGS OGDEN / IL-59 — JAN–OCT 2026 P&L  (Oct thru 10/30)")
 print("=" * 70)
 
 months = MONTHS
