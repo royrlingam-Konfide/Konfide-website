@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Smart Beginnings Oswego — Jul–Oct 2026 P&L from Chase9056 (operating) + Chase9072 (payroll).
-(October is partial — statement pulled 10/14/2026, covers through 10/09.)
+(Bank statements pulled 11/10/2026 cover through 10/30; Amex export covers through 10/16.)
 
 Jan–Jun 2026 are NOT recomputed here — those are already published and verified;
 this script only adds Jul-Oct and carries Jan-Jun forward unchanged from the
@@ -44,14 +44,15 @@ CHECK_MAP = {
     '1096': 'Parts & Materials',         # $198.33 Sep — fire extinguisher testing, per Roy
 }
 
-FILES_9056 = ['Chase9056_Activity_20261014.csv']
-FILES_9072 = ['Chase9072_Activity_20261014.csv']
+FILES_9056 = ['Chase9056_Activity_20261014.csv', 'Chase9056_Activity_20261110.csv']
+FILES_9072 = ['Chase9072_Activity_20261014.csv', 'Chase9072_Activity_20261110.csv']
+AMEX_FILES = ['activity10:2026.csv', 'activity11:2026.csv']
 
 
 def cat_9056(d, a, tp, ck, m):
     if tp == 'ACCT_XFER': return
     if 'AMERICAN EXPRESS' in d: return
-    if 'INTUIT FINANCING' in d: return
+    if 'INTUIT FINANCING' in d: add(m, 'QB Capital', a); return   # loan repayments counted, per Roy 11/10
     if 'BRC' in d: return  # line-of-credit draw/payment, either direction
 
     if a > 0:
@@ -87,7 +88,10 @@ def cat_9056(d, a, tp, ck, m):
     elif 'GRTWAYS' in d or 'GREATWAY' in d:      add(m, 'Legal Fees', a)
     elif 'LEASE SERVICES' in d:                  add(m, 'Equipment Lease', a)   # same copier vendor as Kirk
     elif 'AMAZON' in d:                           add(m, 'Amazon', a)
+    elif 'LP CUSTOM' in d or 'ZAZZLE' in d:       add(m, 'Supplies & materials', a)   # same as Amex rule
+    elif 'COMCAST' in d or 'XFINITY' in d:        add(m, 'Internet & TV services', a)
     elif 'SEG INC' in d and tp == 'WIRE_OUTGOING': add(m, 'Rent', a)   # per Roy
+    elif 'ZELLE PAYMENT TO PEREZ' in d:           add(m, 'Parts & Materials', a)   # repair, per Roy
     elif 'ZELLE PAYMENT TO MEGAN' in d:           pass   # loan to employee — not a P&L expense, per Roy
     elif tp == 'CHECK_PAID':
         cat_name = CHECK_MAP.get(ck)
@@ -111,28 +115,56 @@ def cat_9072(d, a, tp, m):
     else: unknowns.append(f'{m}  9072 DEBIT  ${a:>9,.2f}  {d[:70]}')
 
 
-for fname in FILES_9056:
-    with open(fname, newline='', encoding='utf-8-sig') as f:
-        for row in csv.DictReader(f):
-            m = mo(row['Posting Date'])
-            if not m: continue
-            cat_9056(row['Description'].upper(), float(row['Amount']), row['Type'].strip(),
-                      row.get('Check or Slip #', '').strip(), m)
+# Statement pulls overlap. A row already seen in an earlier file is skipped; running balance is part of
+# the key, so genuine same-day same-amount charges stay distinct.
+def bank_rows(files):
+    seen, dupes = set(), 0
+    for fname in files:
+        file_keys = set()
+        with open(fname, newline='', encoding='utf-8-sig') as f:
+            for row in csv.DictReader(f):
+                key = (row['Posting Date'], row['Description'], row['Amount'], row['Type'], row['Balance'],
+                       (row.get('Check or Slip #') or '').strip())
+                if key in seen:
+                    dupes += 1; continue
+                file_keys.add(key)
+                yield row
+        seen |= file_keys
+    print(f'({files[0][:9]}: skipped {dupes} duplicate rows from overlapping statement pulls)')
 
-for fname in FILES_9072:
-    with open(fname, newline='', encoding='utf-8-sig') as f:
-        for row in csv.DictReader(f):
-            m = mo(row['Posting Date'])
-            if not m: continue
-            cat_9072(row['Description'].upper(), float(row['Amount']), row['Type'].strip(), m)
+for row in bank_rows(FILES_9056):
+    m = mo(row['Posting Date'])
+    if not m: continue
+    cat_9056(row['Description'].upper(), float(row['Amount']), row['Type'].strip(),
+             row.get('Check or Slip #', '').strip(), m)
 
-# ── AMERICAN EXPRESS — Jul 1 thru Oct 9 2026 (matches the bank-account cutoff) ──
-with open('activity10:2026.csv', newline='', encoding='utf-8-sig') as f:
-    for row in csv.DictReader(f):
+for row in bank_rows(FILES_9072):
+    m = mo(row['Posting Date'])
+    if not m: continue
+    cat_9072(row['Description'].upper(), float(row['Amount']), row['Type'].strip(), m)
+
+# ── AMERICAN EXPRESS — Jul 1 onward. Exports overlap and have no running balance, so dedupe by count:
+# a later file's row is skipped only as many times as that exact row appeared in earlier files.
+from collections import Counter
+def amex_rows(files):
+    prior, dupes = Counter(), 0
+    for fname in files:
+        this, used = Counter(), Counter()
+        with open(fname, newline='', encoding='utf-8-sig') as f:
+            for row in csv.DictReader(f):
+                key = (row['Date'], row['Description'], row['Card Member'], row['Amount'])
+                this[key] += 1
+                if used[key] < prior[key]:
+                    used[key] += 1; dupes += 1; continue
+                yield row
+        prior += this
+    print(f'(Amex: skipped {dupes} duplicate rows from overlapping exports)')
+
+if True:
+    for row in amex_rows(AMEX_FILES):
         date = row['Date'].strip()
         m = mo(date)
         if not m: continue
-        if date == '10/10/2026': continue   # one day past our Oct cutoff
         d = row['Description'].upper()
         a = float(row['Amount'])
 
@@ -218,11 +250,11 @@ EXPENSE_CATS = [
     'Water & sewer', 'Internet & TV services', 'Utilities', 'Disposal & waste fees',
     'Orkin', 'Software & apps', 'Entertainment', 'Landscaping', 'Cleaning Service',
     'Legal Fees', 'Business licenses', 'Advertising & marketing', 'Nurse visit',
-    'Equipment Lease',
+    'Equipment Lease', 'QB Capital',
 ]
 
 print('=' * 110)
-print('  SMART BEGINNINGS OSWEGO — JUL–OCT 2026 P&L  (Oct partial, thru 10/09; no Amex this stretch)')
+print('  SMART BEGINNINGS OSWEGO — JUL–OCT 2026 P&L  (bank thru 10/30, Amex thru 10/16)')
 print('=' * 110)
 print(f"\n{'':32}" + ''.join(f'{m:>10}' for m in MONTHS))
 print('-' * (32 + 10 * len(MONTHS)))
@@ -255,6 +287,17 @@ if unknowns:
     for u in unknowns: print(' ', u)
 
 
+# ── QB Capital for June ─────────────────────────────────────────────────────
+# June is otherwise carried forward from the published CSV, but QB Capital payments were not counted
+# before 11/10, so pull June's from the June statement. (Jan–May statement shows no QB payments.)
+# Includes the 6/23 $50,497.81 payoff (funded by a transfer from ...5899 on 6/22) — counted as an
+# expense, consistent with Kirk & Butterfield's June payoff.
+qb_jun = 0.0
+with open('Chase9056_Activity_20260702.CSV', newline='', encoding='utf-8-sig') as f:
+    for row in csv.DictReader(f):
+        if row['Posting Date'].startswith('06/') and 'INTUIT FINANCING' in row['Description'].upper():
+            qb_jun += abs(float(row['Amount']))
+
 # ── MERGE with existing Jan-May and WRITE CSV ────────────────────────────────
 here = os.path.dirname(os.path.abspath(__file__))
 csv_path = os.path.join(here, 'oswego_pl_2026.csv')
@@ -273,7 +316,9 @@ with open(csv_path, 'w', newline='') as f:
     for label in all_labels:
         row = [label]
         for m in ALL_MONTHS:
-            if m in ('Jan', 'Feb', 'Mar', 'Apr', 'May'):
+            if label == 'QB Capital' and m == 'Jun':
+                v = qb_jun
+            elif m in ('Jan', 'Feb', 'Mar', 'Apr', 'May'):
                 v = float(existing.get(label, {}).get(m, 0) or 0)
             elif m in MONTHS:
                 v = pl[m].get(label, 0.0)
