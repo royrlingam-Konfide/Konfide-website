@@ -199,7 +199,7 @@ code{background:#F1F4F9;border:1px solid var(--border);padding:1px 6px;border-ra
         <div class="co-icon" id="co-icon">🏢</div>
         <div>
           <div class="co-h1" id="co-h1">Konfide Properties LLC</div>
-          <div class="co-sub">Cash Flow Statement · 2025</div>
+          <div class="co-sub" id="co-sub">Cash Flow Statement · 2026</div>
         </div>
       </div>
       <div class="co-badge">Active</div>
@@ -207,6 +207,12 @@ code{background:#F1F4F9;border:1px solid var(--border);padding:1px 6px;border-ra
 
     <!-- Period Selector -->
     <div class="period-bar">
+      <div class="period-label">Year</div>
+      <div class="period-modes">
+        <button class="pm" id="yr-2025" onclick="setYear('2025')">2025</button>
+        <button class="pm" id="yr-2026" onclick="setYear('2026')">2026</button>
+      </div>
+      <div class="period-div"></div>
       <div class="period-label">View by</div>
       <div class="period-modes">
         <button class="pm" id="pm-monthly"  onclick="setPeriod('monthly')">Monthly</button>
@@ -304,10 +310,10 @@ code{background:#F1F4F9;border:1px solid var(--border);padding:1px 6px;border-ra
     <!-- Format guide -->
     <div class="fmt">
       <h3>📋 Where this data comes from</h3>
-      Numbers load automatically from the published <strong>Konfide Properties LLC 2025 cash-flow</strong> Google Sheet
-      (<code>Label</code> column + <code>Jan 2025…Dec 2025</code>). Edit the sheet and refresh this page — no redeploy needed.<br><br>
+      Numbers load automatically from the published <strong>Konfide Properties LLC cash-flow</strong> Google Sheet for the selected year
+      (<code>Label</code> column + <code>Jan 2026…Dec 2026</code>). Edit the sheet and refresh this page — no redeploy needed.<br><br>
       The <code>Rental Income</code> row is income; every other row (Mortgage, Insurance, HOA, Utilities,
-      Repair &amp; Maintenance, Professional Fees, Office Expenses) is an expense. Combines the Chase&nbsp;…5899
+      Repair &amp; Maintenance, Professional Fees, Travel, Office Expenses) is an expense. Combines the Chase&nbsp;…5899
       bank activity with the Konfide Properties Amex (card&nbsp;…51001). Row labels must match what the dashboard
       expects — tell Claude if you add a new category so it can be registered.<br><br>
       <strong>↑ Upload CSV</strong> lets you preview a different file without touching the sheet.
@@ -339,7 +345,14 @@ if(sessionStorage.getItem('kc_auth')==='1'){
 const COS = {
   prop: {name:'Konfide Properties LLC', icon:'🏢', accent:'#10B981',
          // Published Google Sheet (File → Share → Publish to web → CSV). Edit the sheet to update the dashboard.
-         sheetUrl:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqUaWOTA3hqflKAOWNTwPElDJT5v5bBHpg1L6yRydd5ONOlYeMKxSnETT4AjgbR7NTUIAkpabBcZbB/pub?output=csv'},
+         // One published Google Sheet per year (File → Share → Publish to web → CSV).
+         // A year with no sheet yet falls back to the CSV committed next to this page.
+         sheets:{
+           '2025':'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqUaWOTA3hqflKAOWNTwPElDJT5v5bBHpg1L6yRydd5ONOlYeMKxSnETT4AjgbR7NTUIAkpabBcZbB/pub?output=csv',
+           '2026':'',
+         },
+         fallback:{'2026':'konfide_prop_cf_2026.csv'},
+         years:['2025','2026'], defaultYear:'2026'},
 };
 
 // ── Period state ──
@@ -366,16 +379,17 @@ const ITEMS = [
   {id:'e_util',  type:'line',    label:'Utilities',                  level:1, parent:null, csv:['utilities']},
   {id:'e_repair',type:'line',    label:'Repair & Maintenance',       level:1, parent:null, csv:['repair & maintenance','repair','repairs']},
   {id:'e_prof',  type:'line',    label:'Professional Fees',          level:1, parent:null, csv:['professional fees','professional fee']},
+  {id:'e_travel',type:'line',    label:'Travel',                     level:1, parent:null, csv:['travel']},
   {id:'e_office',type:'line',    label:'Office Expenses',            level:1, parent:null, csv:['office expenses','office expense']},
 
   {id:'t_exp',   type:'total',   label:'Total for Expenses',         level:0,
-    kids:['e_mort','e_ins','e_hoa','e_util','e_repair','e_prof','e_office']},
+    kids:['e_mort','e_ins','e_hoa','e_util','e_repair','e_prof','e_travel','e_office']},
   {id:'ni',      type:'summary', label:'Net Cash Flow',              level:0, formula:'ni', final:true},
 ];
 
 const INC_IDS = ['rental'];
 // Every expense line id — the single source of truth for compute(), the template, and totals.
-const RS_EXP_IDS = ['e_mort','e_ins','e_hoa','e_util','e_repair','e_prof','e_office'];
+const RS_EXP_IDS = ['e_mort','e_ins','e_hoa','e_util','e_repair','e_prof','e_travel','e_office'];
 
 // ── State ──
 // vals[id] = { all: n } (simple) OR { jan: n, feb: n, ... } (multi-period)
@@ -749,6 +763,7 @@ function updateCharts(c){
     {l:'Professional Fees',    v:getVal('e_prof')},
     {l:'Insurance',            v:getVal('e_ins')},
     {l:'Utilities',            v:getVal('e_util')},
+    {l:'Travel',               v:getVal('e_travel')},
     {l:'Office Expenses',      v:getVal('e_office')},
   ].filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
 
@@ -867,9 +882,11 @@ function parseCSV(text){
       if(isMulti && monthColMap){
         const d={};
         Object.entries(monthColMap).forEach(([colIdx,mKey])=>{
-          const raw=(cols[colIdx]||'').replace(/^"|"$/g,'').replace(/[$,%() ]/g,'').replace(/,/g,'').trim();
-          const n=parseFloat(raw);
-          if(!isNaN(n)) d[mKey]=Math.abs(n);
+          const cell=(cols[colIdx]||'').replace(/^"|"$/g,'').trim();
+          const raw=cell.replace(/[$,%() ]/g,'').trim();
+          let n=parseFloat(raw);
+          if(cell.includes('(')) n=-Math.abs(n);   // accounting format (1,234) = negative
+          if(!isNaN(n)) d[mKey]=n;                 // keep sign: a refund can make a month negative
         });
         if(Object.keys(d).length>0) result[item.id]=d;
       } else {
@@ -1112,23 +1129,47 @@ async function init(){
   renderPeriodUI();
   renderAll();
 
-  // Auto-load from Google Sheet
-  if(cfg.sheetUrl){
+  year = p.get('year');
+  if(!cfg.years.includes(year)) year = cfg.defaultYear;
+  await loadYear();
+}
+
+// ── Year ──
+let year = null;
+function setYear(y){
+  if(y===year) return;
+  year = y;
+  const u = new URL(window.location); u.searchParams.set('year', y); history.replaceState(null,'',u);
+  loadYear();
+}
+async function loadYear(){
+  const cfg = COS[co];
+  cfg.years.forEach(y=>document.getElementById('yr-'+y)?.classList.toggle('active', y===year));
+  document.getElementById('co-sub').textContent = 'Cash Flow Statement · ' + year;
+  vals = {}; isMultiPeriod = false;
+  document.getElementById('csv-banner').style.display='none';
+  renderPeriodUI(); renderAll();
+  const sources = [[cfg.sheets[year], 'Google Sheets'], [cfg.fallback && cfg.fallback[year], 'the latest committed file']]
+    .filter(([u])=>u);
+  const want = year;
+  for(const [url, from] of sources){
     try{
-      const resp = await fetch(cfg.sheetUrl);
-      const text = await resp.text();
-      const result = parseCSV(text);
+      const resp = await fetch(url, {cache:'no-store'});
+      if(!resp.ok) continue;
+      const result = parseCSV(await resp.text());
       const count = Object.keys(result.vals).length;
+      if(want!==year) return;            // user switched year mid-load
       if(count>0){
         vals=result.vals;
         isMultiPeriod=result.isMulti;
-        document.getElementById('csv-msg').innerHTML=`<strong>${count} line items</strong> loaded automatically from Google Sheets.`;
+        document.getElementById('csv-msg').innerHTML=`<strong>${count} line items</strong> for ${year} loaded automatically from ${from}.`;
         document.getElementById('csv-banner').style.display='flex';
         renderPeriodUI();
         renderAll();
+        return;
       }
     }catch(e){
-      console.warn('Could not auto-load sheet:',e);
+      console.warn('Could not load '+year+' from '+from+':',e);
     }
   }
 }
