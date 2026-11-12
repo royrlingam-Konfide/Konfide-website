@@ -207,6 +207,13 @@ code{background:#F1F4F9;border:1px solid var(--border);padding:1px 6px;border-ra
 
     <!-- Period Selector -->
     <div class="period-bar">
+      <div class="period-label">Entity</div>
+      <div class="period-modes">
+        <button class="pm" id="co-prop" onclick="setCo('prop')">Konfide Properties</button>
+        <button class="pm" id="co-aurora" onclick="setCo('aurora')">Konfide Aurora</button>
+        <button class="pm" id="co-combined" onclick="setCo('combined')">Combined</button>
+      </div>
+      <div class="period-div"></div>
       <div class="period-label">Year</div>
       <div class="period-modes">
         <button class="pm" id="yr-2025" onclick="setYear('2025')">2025</button>
@@ -353,6 +360,14 @@ const COS = {
          },
          fallback:{'2026':'konfide_prop_cf_2026.csv'},
          years:['2025','2026'], defaultYear:'2026'},
+  aurora: {name:'Konfide Aurora LLC', icon:'🏘️', accent:'#0EA5E9',
+         sheets:{'2026':''},
+         fallback:{'2026':'konfide_aurora_cf_2026.csv'},
+         years:['2026'], defaultYear:'2026'},
+  // Owner's view only — the two LLCs file separately. Transfers between their accounts are excluded
+  // in both source files, so adding them never double-counts.
+  combined: {name:'Konfide Properties + Aurora (Combined)', icon:'🏙️', accent:'#BF9B50',
+         parts:['prop','aurora'], years:['2025','2026'], defaultYear:'2026'},
 };
 
 // ── Period state ──
@@ -1119,13 +1134,8 @@ async function init(){
   co=p.get('co')||'prop';
   if(!COS[co]) co='prop';
   const cfg=COS[co];
-  document.title=cfg.name+' P&L — Konfide Capital';
-  document.getElementById('hdr-co').textContent=cfg.name;
-  document.getElementById('print-title').textContent=cfg.name+' — P&L Statement';
+  applyCo();
   document.getElementById('print-date').textContent='Printed '+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-  document.getElementById('co-icon').textContent=cfg.icon;
-  document.getElementById('co-icon').style.background=cfg.accent+'22';
-  document.getElementById('co-h1').textContent=cfg.name;
   renderPeriodUI();
   renderAll();
 
@@ -1134,44 +1144,76 @@ async function init(){
   await loadYear();
 }
 
-// ── Year ──
+// ── Entity + Year ──
 let year = null;
+function applyCo(){
+  const cfg = COS[co];
+  document.title=cfg.name+' P&L — Konfide Capital';
+  document.getElementById('hdr-co').textContent=cfg.name;
+  document.getElementById('print-title').textContent=cfg.name+' — P&L Statement';
+  document.getElementById('co-icon').textContent=cfg.icon;
+  document.getElementById('co-icon').style.background=cfg.accent+'22';
+  document.getElementById('co-h1').textContent=cfg.name;
+  Object.keys(COS).forEach(k=>document.getElementById('co-'+k)?.classList.toggle('active', k===co));
+  ['2025','2026'].forEach(y=>{ const b=document.getElementById('yr-'+y); if(b) b.disabled=!cfg.years.includes(y); });
+}
+function setParam(k,v){ const u=new URL(window.location); u.searchParams.set(k,v); history.replaceState(null,'',u); }
+function setCo(c){
+  if(c===co || !COS[c]) return;
+  co = c; setParam('co', c);
+  if(!COS[co].years.includes(year)){ year = COS[co].defaultYear; setParam('year', year); }
+  applyCo(); loadYear();
+}
 function setYear(y){
-  if(y===year) return;
-  year = y;
-  const u = new URL(window.location); u.searchParams.set('year', y); history.replaceState(null,'',u);
+  if(y===year || !COS[co].years.includes(y)) return;
+  year = y; setParam('year', y);
   loadYear();
 }
-async function loadYear(){
-  const cfg = COS[co];
-  cfg.years.forEach(y=>document.getElementById('yr-'+y)?.classList.toggle('active', y===year));
-  document.getElementById('co-sub').textContent = 'Cash Flow Statement · ' + year;
-  vals = {}; isMultiPeriod = false;
-  document.getElementById('csv-banner').style.display='none';
-  renderPeriodUI(); renderAll();
-  const sources = [[cfg.sheets[year], 'Google Sheets'], [cfg.fallback && cfg.fallback[year], 'the latest committed file']]
-    .filter(([u])=>u);
-  const want = year;
+// Load one entity's year: its published sheet first, then the committed CSV.
+async function fetchEntity(key, y){
+  const cfg = COS[key];
+  if(!cfg.years.includes(y)) return {vals:{}, isMulti:true, from:null};
+  const sources = [[cfg.sheets[y], 'Google Sheets'], [cfg.fallback && cfg.fallback[y], 'the latest committed file']].filter(([u])=>u);
   for(const [url, from] of sources){
     try{
       const resp = await fetch(url, {cache:'no-store'});
       if(!resp.ok) continue;
-      const result = parseCSV(await resp.text());
-      const count = Object.keys(result.vals).length;
-      if(want!==year) return;            // user switched year mid-load
-      if(count>0){
-        vals=result.vals;
-        isMultiPeriod=result.isMulti;
-        document.getElementById('csv-msg').innerHTML=`<strong>${count} line items</strong> for ${year} loaded automatically from ${from}.`;
-        document.getElementById('csv-banner').style.display='flex';
-        renderPeriodUI();
-        renderAll();
-        return;
-      }
-    }catch(e){
-      console.warn('Could not load '+year+' from '+from+':',e);
-    }
+      const r = parseCSV(await resp.text());
+      if(Object.keys(r.vals).length>0) return {...r, from};
+    }catch(e){ console.warn('Could not load '+key+' '+y+' from '+from+':', e); }
   }
+  return null;
+}
+function addVals(a, b){
+  const out = JSON.parse(JSON.stringify(a));
+  Object.entries(b).forEach(([id, d])=>{
+    out[id] = out[id] || {};
+    Object.entries(d).forEach(([m, n])=>{ out[id][m] = (out[id][m]||0) + n; });
+  });
+  return out;
+}
+async function loadYear(){
+  const cfg = COS[co];
+  cfg.years.forEach(y=>document.getElementById('yr-'+y)?.classList.toggle('active', y===year));
+  ['2025','2026'].forEach(y=>{ if(!cfg.years.includes(y)) document.getElementById('yr-'+y)?.classList.remove('active'); });
+  document.getElementById('co-sub').textContent = 'Cash Flow Statement · ' + year;
+  vals = {}; isMultiPeriod = false;
+  document.getElementById('csv-banner').style.display='none';
+  renderPeriodUI(); renderAll();
+  const want = co+'|'+year;
+  const parts = cfg.parts || [co];
+  const results = await Promise.all(parts.map(k=>fetchEntity(k, year)));
+  if(want !== co+'|'+year) return;                 // user switched mid-load
+  const got = results.map((r,i)=>[parts[i], r]).filter(([,r])=>r && Object.keys(r.vals).length);
+  if(!got.length) return;
+  vals = got.reduce((acc,[,r])=>addVals(acc, r.vals), {});
+  isMultiPeriod = got.every(([,r])=>r.isMulti);
+  const count = Object.keys(vals).length;
+  const from = got.map(([k,r])=> (parts.length>1 ? COS[k].name+': ' : '') + r.from).join(' · ');
+  document.getElementById('csv-msg').innerHTML=`<strong>${count} line items</strong> for ${year} loaded automatically from ${from}.`;
+  document.getElementById('csv-banner').style.display='flex';
+  renderPeriodUI();
+  renderAll();
 }
 
 if(sessionStorage.getItem('kc_auth')==='1') init();
